@@ -11,15 +11,15 @@ interface MetricCardProps {
 
 export const MetricCard = ({ icon: Icon, title, value, description, iconColor }: MetricCardProps) => {
   return (
-    <Card className="glass-effect p-6 hover:shadow-xl transition-all duration-300 animate-scale-in">
-      <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-xl ${iconColor} bg-opacity-10`}>
-          <Icon className={`w-6 h-6 ${iconColor}`} />
+    <Card className="glass-effect-strong p-7 hover-lift transition-all duration-300 animate-scale-in rounded-2xl border-2">
+      <div className="flex items-start gap-5">
+        <div className={`p-4 rounded-2xl ${iconColor} bg-opacity-15 shadow-lg`}>
+          <Icon className={`w-7 h-7 ${iconColor}`} />
         </div>
         <div className="flex-1">
-          <p className="text-sm text-muted-foreground mb-1">{title}</p>
-          <p className="text-3xl font-bold mb-2">{value}</p>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">{title}</p>
+          <p className="text-4xl font-extrabold mb-3 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">{value}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
         </div>
       </div>
     </Card>

@@ -106,24 +106,24 @@ const Index = () => {
   return (
     <div className="min-h-screen gradient-hero">
       {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm bg-background/50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-primary rounded-lg">
-              <Cloud className="w-6 h-6 text-white" />
+      <header className="border-b border-border/50 backdrop-blur-lg bg-background/80 sticky top-0 z-50 shadow-lg">
+        <div className="container mx-auto px-4 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-3 gradient-primary rounded-2xl shadow-glow-primary">
+              <Cloud className="w-7 h-7 text-white" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              WeatherWise Planner
+            <span className="text-2xl font-extrabold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              WeatherWise
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {isLoggedIn ? (
               <>
-                <span className="text-sm text-muted-foreground hidden md:block">
+                <span className="text-sm font-medium text-muted-foreground hidden md:block glass-effect px-4 py-2 rounded-xl">
                   {userEmail}
                 </span>
                 <AboutDialog />
-                <Button variant="outline" size="sm" onClick={handleLogout}>
+                <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl">
                   <LogOut className="w-4 h-4" />
                   Sair
                 </Button>
@@ -131,7 +131,7 @@ const Index = () => {
             ) : (
               <>
                 <AboutDialog />
-                <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
+                <Button variant="hero" size="sm" onClick={() => navigate("/auth")} className="rounded-xl shadow-glow-primary">
                   Entrar
                 </Button>
               </>
@@ -144,27 +144,27 @@ const Index = () => {
       <main className="container mx-auto px-4 py-20">
         <div className="max-w-4xl mx-auto space-y-12">
           {/* Hero Text */}
-          <div className="text-center space-y-4 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-sm text-primary font-medium mb-4">
-              <Sparkles className="w-4 h-4" />
+          <div className="text-center space-y-6 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 glass-effect rounded-full text-sm text-primary font-semibold mb-2 shadow-glow-primary">
+              <Sparkles className="w-4 h-4 animate-float" />
               NASA Space Apps Challenge 2025
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
+            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight">
               Descubra as Probabilidades
               <br />
-              <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent animate-gradient">
                 Climáticas do Seu Evento
               </span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Use décadas de dados de observação da Terra da NASA para planejar eventos, 
-              atividades agrícolas e muito mais com precisão sem precedentes.
+              atividades agrícolas e muito mais com <span className="font-semibold text-foreground">precisão sem precedentes.</span>
             </p>
           </div>
 
           {/* Search Form */}
-          <Card className="glass-effect p-8 shadow-2xl animate-slide-up">
-            <div className="space-y-6">
+          <Card className="glass-effect-strong p-10 shadow-2xl animate-slide-up hover-lift rounded-2xl border-2">
+            <div className="space-y-8">
               <div className="space-y-2">
                 <Label htmlFor="location" className="text-base font-semibold">
                   Localização do Evento
@@ -241,7 +241,7 @@ const Index = () => {
               <Button 
                 variant="hero" 
                 size="lg" 
-                className="w-full h-14 text-lg"
+                className="w-full h-16 text-lg font-semibold shadow-glow-primary rounded-xl"
                 onClick={handleAnalyze}
                 disabled={isAnalyzing}
               >
@@ -249,39 +249,40 @@ const Index = () => {
                 {isAnalyzing ? "Analisando..." : "Analisar Probabilidades Climáticas"}
               </Button>
 
-              <p className="text-center text-sm text-muted-foreground">
+              <p className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
                 Análise baseada em 20+ anos de dados históricos da NASA
               </p>
             </div>
           </Card>
 
           {/* Features */}
-          <div className="grid md:grid-cols-3 gap-6 pt-8">
-            <div className="text-center space-y-2 animate-fade-in">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <Cloud className="w-6 h-6 text-primary" />
+          <div className="grid md:grid-cols-3 gap-8 pt-12">
+            <div className="text-center space-y-3 animate-fade-in glass-effect p-6 rounded-2xl hover-lift">
+              <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-primary">
+                <Cloud className="w-8 h-8 text-white" />
               </div>
-              <h3 className="font-semibold">Dados da NASA</h3>
-              <p className="text-sm text-muted-foreground">
-                Décadas de observações precisas da Terra
+              <h3 className="font-bold text-lg">Dados da NASA</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Décadas de observações precisas da Terra com dados validados cientificamente
               </p>
             </div>
-            <div className="text-center space-y-2 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-              <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <Sparkles className="w-6 h-6 text-secondary" />
+            <div className="text-center space-y-3 animate-fade-in glass-effect p-6 rounded-2xl hover-lift" style={{ animationDelay: "0.1s" }}>
+              <div className="w-16 h-16 gradient-secondary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-secondary">
+                <Sparkles className="w-8 h-8 text-white" />
               </div>
-              <h3 className="font-semibold">Análise Personalizada</h3>
-              <p className="text-sm text-muted-foreground">
-                Índice de conforto baseado em suas preferências
+              <h3 className="font-bold text-lg">Análise Personalizada</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Índice de conforto baseado em suas preferências específicas
               </p>
             </div>
-            <div className="text-center space-y-2 animate-fade-in" style={{ animationDelay: "0.2s" }}>
-              <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <Calendar className="w-6 h-6 text-accent" />
+            <div className="text-center space-y-3 animate-fade-in glass-effect p-6 rounded-2xl hover-lift" style={{ animationDelay: "0.2s" }}>
+              <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-accent">
+                <Calendar className="w-8 h-8 text-white" />
               </div>
-              <h3 className="font-semibold">Datas Alternativas</h3>
-              <p className="text-sm text-muted-foreground">
-                Sugestões inteligentes para melhores condições
+              <h3 className="font-bold text-lg">Datas Alternativas</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Sugestões inteligentes com melhores condições climáticas
               </p>
             </div>
           </div>

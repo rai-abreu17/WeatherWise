@@ -97,33 +97,33 @@ const Results = () => {
   return (
     <div className="min-h-screen gradient-hero">
       {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm bg-background/50 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="border-b border-border/50 backdrop-blur-lg bg-background/80 sticky top-0 z-50 shadow-lg">
+        <div className="container mx-auto px-4 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="rounded-xl hover-lift">
               <ArrowLeft className="w-4 h-4" />
               Voltar
             </Button>
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-primary rounded-lg">
-                <Cloud className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="p-3 gradient-primary rounded-2xl shadow-glow-primary">
+                <Cloud className="w-6 h-6 text-white" />
               </div>
-              <span className="text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                WeatherWise Planner
+              <span className="text-xl font-extrabold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                WeatherWise
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <AboutDialog />
-            <Button variant="hero" size="sm" onClick={() => navigate("/")}>
+            <Button variant="hero" size="sm" onClick={() => navigate("/")} className="rounded-xl shadow-glow-primary">
               Nova Consulta
             </Button>
             {isLoggedIn ? (
-              <Button variant="outline" size="sm" onClick={handleLogout}>
+              <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl">
                 <LogOut className="w-4 h-4" />
               </Button>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => navigate("/auth")}>
+              <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="rounded-xl">
                 <User className="w-4 h-4" />
                 Entrar
               </Button>
@@ -136,12 +136,14 @@ const Results = () => {
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Event Info */}
-          <div className="animate-fade-in">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <Calendar className="w-4 h-4" />
-              <span className="text-sm">{analysisData.location.name} • {currentData.displayDate}</span>
+          <div className="animate-fade-in glass-effect-strong p-6 rounded-2xl">
+            <div className="flex items-center gap-3 text-muted-foreground mb-3">
+              <Calendar className="w-5 h-5" />
+              <span className="text-base font-semibold">{analysisData.location.name} • {currentData.displayDate}</span>
             </div>
-            <h1 className="text-4xl font-bold">Análise Climática Completa</h1>
+            <h1 className="text-5xl font-extrabold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              Análise Climática Completa
+            </h1>
           </div>
 
           {/* Comfort Index */}
@@ -150,9 +152,11 @@ const Results = () => {
           </div>
 
           {/* Metrics Grid */}
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold">Métricas Climáticas Detalhadas</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-6">
+            <h2 className="text-3xl font-extrabold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+              Métricas Climáticas Detalhadas
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <MetricCard
                 icon={CloudRain}
                 title="Probabilidade de Chuva"
@@ -200,16 +204,16 @@ const Results = () => {
 
           {/* Alert */}
           {currentData.alertMessage && (
-            <Card className="glass-effect p-6 border-l-4 border-warning animate-slide-up">
-              <div className="flex gap-4">
-                <div className="p-3 bg-warning/10 rounded-lg h-fit">
-                  <TrendingUp className="w-6 h-6 text-warning" />
+            <Card className="glass-effect-strong p-8 border-l-4 border-warning animate-slide-up rounded-2xl hover-lift shadow-glow-secondary">
+              <div className="flex gap-6">
+                <div className="p-4 bg-warning/15 rounded-2xl h-fit shadow-lg">
+                  <TrendingUp className="w-8 h-8 text-warning" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                  <h3 className="text-2xl font-bold mb-3 flex items-center gap-3 text-warning">
                     Alerta de Tendência Climática
                   </h3>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground text-lg leading-relaxed">
                     {currentData.alertMessage}
                   </p>
                 </div>
@@ -218,14 +222,15 @@ const Results = () => {
           )}
 
           {/* Alternative Dates */}
-          <div className="space-y-4 animate-slide-up">
+          <div className="space-y-6 animate-slide-up">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Datas Alternativas Recomendadas</h2>
-              <Button variant="ghost" size="sm">Ver Mais</Button>
+              <h2 className="text-3xl font-extrabold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+                Datas Alternativas Recomendadas
+              </h2>
             </div>
-            <Card className="glass-effect p-6">
-              <p className="text-muted-foreground mb-4">
-                Baseado em dados históricos de {analysisData.dataSource.period}, estas datas têm melhores condições climáticas:
+            <Card className="glass-effect-strong p-8 rounded-2xl border-2">
+              <p className="text-muted-foreground mb-6 text-lg leading-relaxed">
+                Baseado em dados históricos, estas datas têm melhores condições climáticas:
               </p>
               <div className="space-y-3">
                 {allDates.map((dateData, index) => (
@@ -247,12 +252,12 @@ const Results = () => {
           </div>
 
           {/* Data Source */}
-          <div className="text-center py-8">
-            <Card className="glass-effect inline-block px-8 py-4">
-              <p className="text-sm text-muted-foreground">
-                Análise baseada em {analysisData.dataSource.yearsAnalyzed} anos de dados históricos ({analysisData.dataSource.period})
+          <div className="text-center py-12">
+            <Card className="glass-effect-strong inline-block px-10 py-6 rounded-2xl shadow-xl hover-lift">
+              <p className="text-base text-muted-foreground leading-relaxed">
+                Análise baseada em <span className="font-bold text-foreground">{analysisData.dataSource.yearsAnalyzed} anos</span> de dados históricos ({analysisData.dataSource.period})
                 <br />
-                <span className="font-semibold text-foreground">{analysisData.dataSource.provider}</span>
+                <span className="font-extrabold text-lg bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mt-2 inline-block">{analysisData.dataSource.provider}</span>
               </p>
             </Card>
           </div>

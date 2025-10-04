@@ -18,34 +18,41 @@ export const ComfortIndex = ({ score }: ComfortIndexProps) => {
   };
 
   return (
-    <Card className="glass-effect p-8 shadow-xl animate-slide-up">
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold mb-2">Índice de Conforto Pessoal (ICP)</h2>
-          <p className="text-muted-foreground">Baseado em suas preferências e dados históricos de 20 anos</p>
+    <Card className="glass-effect-strong p-10 shadow-2xl animate-slide-up rounded-3xl border-2 hover-lift">
+      <div className="space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-extrabold mb-3 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            Índice de Conforto Pessoal (ICP)
+          </h2>
+          <p className="text-muted-foreground text-lg">Baseado em suas preferências e dados históricos de 20 anos</p>
         </div>
 
-        <div className="text-center py-6">
-          <div className="text-7xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
-            {score}
+        <div className="text-center py-8">
+          <div className="relative inline-block">
+            <div className="text-8xl md:text-9xl font-extrabold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent mb-3 animate-scale-in">
+              {score}
+            </div>
+            <div className="absolute -top-4 -right-4 w-12 h-12 bg-gradient-to-r from-primary to-secondary rounded-full animate-pulse shadow-glow-primary"></div>
           </div>
-          <div className="text-2xl text-muted-foreground">/100</div>
+          <div className="text-3xl font-bold text-muted-foreground">/100</div>
         </div>
 
-        <div className="relative h-6 bg-muted rounded-full overflow-hidden">
+        <div className="relative h-8 bg-muted rounded-full overflow-hidden shadow-inner">
           <div className="absolute inset-0 bg-gradient-to-r from-destructive via-warning to-success"></div>
           <div 
-            className="absolute top-0 bottom-0 w-1 bg-foreground shadow-lg"
-            style={{ left: `${score}%` }}
+            className="absolute top-0 bottom-0 w-2 bg-foreground shadow-xl rounded-full transition-all duration-500"
+            style={{ left: `calc(${score}% - 4px)` }}
           >
-            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-foreground text-background px-3 py-1 rounded text-sm font-semibold whitespace-nowrap">
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 glass-effect-strong px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap shadow-lg">
               {score}
             </div>
           </div>
         </div>
 
-        <div className="text-center">
-          <p className="text-lg font-semibold">{getScoreLabel(score)}</p>
+        <div className="text-center glass-effect p-4 rounded-2xl">
+          <p className="text-xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+            {getScoreLabel(score)}
+          </p>
         </div>
       </div>
     </Card>
