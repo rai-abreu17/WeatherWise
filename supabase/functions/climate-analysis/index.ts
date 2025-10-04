@@ -118,8 +118,33 @@ serve(async (req) => {
 });
 
 // Geocoding using OpenStreetMap Nominatim (free, no API key needed)
+// Also accepts direct coordinates in format "lat, lon"
 async function geocodeLocation(location: string): Promise<{ lat: number; lon: number }> {
-  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`;
+  // Check if input is coordinates (format: "lat, lon" or "lat,lon")
+  const coordPattern = /^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/;
+  const coordMatch = location.match(coordPattern);
+  
+  if (coordMatch) {
+    const lat = parseFloat(coordMatch[1]);
+    const lon = parseFloat(coordMatch[2]);
+    
+    // Validate coordinates
+    if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+      console.log('Using direct coordinates:', { lat, lon });
+      return { lat, lon };
+    }
+  }
+  
+  // Otherwise, geocode the location name
+  // Clean up location string for better matching
+  const cleanLocation = location
+    .replace(/\s*,\s*BRA$/i, ', Brazil')  // Replace BRA with Brazil
+    .replace(/\s*,\s*BR$/i, ', Brazil')    // Replace BR with Brazil
+    .trim();
+  
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanLocation)}&format=json&limit=1&accept-language=pt-BR,pt,en`;
+  
+  console.log('Geocoding location:', cleanLocation);
   
   const response = await fetch(url, {
     headers: {
@@ -134,13 +159,16 @@ async function geocodeLocation(location: string): Promise<{ lat: number; lon: nu
   const data = await response.json();
   
   if (!data || data.length === 0) {
-    throw new Error('Location not found');
+    throw new Error(`Localização não encontrada. Tente usar o formato: "Cidade, Estado" ou coordenadas diretas "lat, lon"`);
   }
 
-  return {
+  const result = {
     lat: parseFloat(data[0].lat),
     lon: parseFloat(data[0].lon)
   };
+  
+  console.log('Geocoded to:', result);
+  return result;
 }
 
 // Fetch historical data from NASA POWER API
