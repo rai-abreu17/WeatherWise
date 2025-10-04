@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Cloud, MapPin, Calendar, Sparkles, LogOut, Navigation } from "lucide-react";
+import { Cloud, Calendar, Sparkles, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AboutDialog } from "@/components/AboutDialog";
+import { LocationAutocomplete } from "@/components/LocationAutocomplete";
 import { climateAnalysisSchema } from "@/lib/validations";
 
 const Index = () => {
@@ -20,7 +21,6 @@ const Index = () => {
   const [date, setDate] = useState("");
   const [eventType, setEventType] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   useEffect(() => {
     // Get current user
@@ -41,35 +41,6 @@ const Index = () => {
       toast.success("Você saiu da conta");
       navigate("/auth");
     }
-  };
-
-  const handleGetCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error("Geolocalização não suportada pelo navegador");
-      return;
-    }
-
-    setIsGettingLocation(true);
-    
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        // Set location as coordinates in the format expected by the backend
-        setLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-        toast.success("Localização obtida com sucesso!");
-        setIsGettingLocation(false);
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        toast.error("Erro ao obter localização. Verifique as permissões do navegador.");
-        setIsGettingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
   };
 
   const handleAnalyze = async () => {
@@ -170,31 +141,11 @@ const Index = () => {
                 <Label htmlFor="location" className="text-base font-semibold">
                   Localização do Evento
                 </Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
-                    <Input
-                      id="location"
-                      placeholder="Ex: São Paulo, SP ou -23.5505, -46.6333"
-                      className="pl-10 h-12 text-base"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    className="h-12 px-4"
-                    onClick={handleGetCurrentLocation}
-                    disabled={isGettingLocation}
-                  >
-                    <Navigation className={`w-5 h-5 ${isGettingLocation ? 'animate-pulse' : ''}`} />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Digite uma cidade ou clique no botão para usar sua localização atual
-                </p>
+                <LocationAutocomplete
+                  value={location}
+                  onChange={setLocation}
+                  disabled={isAnalyzing}
+                />
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
