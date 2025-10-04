@@ -6,6 +6,10 @@ import { MetricCard } from "@/components/MetricCard";
 import { ComfortIndex } from "@/components/ComfortIndex";
 import { AlternativeDate } from "@/components/AlternativeDate";
 import { AboutDialog } from "@/components/AboutDialog";
+import PdfExportButton from "@/components/PdfExportButton";
+import ClimateChart from "@/components/ClimateChart";
+import NotificationButton from "@/components/NotificationButton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Cloud, 
   CloudRain, 
@@ -115,9 +119,11 @@ const Results = () => {
           </div>
           <div className="flex items-center gap-3">
             <AboutDialog />
+            <PdfExportButton rootElementId="report-content" fileName="relatorio-event-sky-insight.pdf" buttonText="Exportar PDF" />
             <Button variant="hero" size="sm" onClick={() => navigate("/")} className="rounded-xl shadow-glow-primary">
               Nova Consulta
             </Button>
+            <ThemeToggle />
             {isLoggedIn ? (
               <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl">
                 <LogOut className="w-4 h-4" />
@@ -133,13 +139,17 @@ const Results = () => {
       </header>
 
       {/* Results Content */}
-      <main className="container mx-auto px-4 py-12">
+      <div id="report-content">
+        <main className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Event Info */}
           <div className="animate-fade-in glass-effect-strong p-6 rounded-2xl">
-            <div className="flex items-center gap-3 text-muted-foreground mb-3">
-              <Calendar className="w-5 h-5" />
-              <span className="text-base font-semibold">{analysisData.location.name} • {currentData.displayDate}</span>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Calendar className="w-5 h-5" />
+                <span className="text-base font-semibold">{analysisData.location.name} • {currentData.displayDate}</span>
+              </div>
+              <NotificationButton locationName={analysisData.location.name} />
             </div>
             <h1 className="text-5xl font-extrabold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
               Análise Climática Completa
@@ -151,12 +161,17 @@ const Results = () => {
             <ComfortIndex score={currentData.icp} />
           </div>
 
+          {/* Climate Chart */}
+          <div className="animate-slide-up">
+            <ClimateChart analysisData={analysisData} />
+          </div>
+
           {/* Metrics Grid */}
           <div className="space-y-6">
             <h2 className="text-3xl font-extrabold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
               Métricas Climáticas Detalhadas
             </h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <MetricCard
                 icon={CloudRain}
                 title="Probabilidade de Chuva"
@@ -262,15 +277,16 @@ const Results = () => {
             </Card>
           </div>
         </div>
-      </main>
+        </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border/50 mt-12">
-        <div className="container mx-auto px-4 py-8 text-center text-sm text-muted-foreground">
-          <p>Desenvolvido para o NASA Space Apps Challenge 2025</p>
-          <p className="mt-2">Dados fornecidos pela NASA Earth Observations</p>
-        </div>
-      </footer>
+        {/* Footer */}
+        <footer className="border-t border-border/50 mt-12">
+          <div className="container mx-auto px-4 py-8 text-center text-sm text-muted-foreground">
+            <p>Desenvolvido para o NASA Space Apps Challenge 2025</p>
+            <p className="mt-2">Dados fornecidos pela NASA Earth Observations</p>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 };

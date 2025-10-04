@@ -12,6 +12,10 @@ import { toast } from "sonner";
 import { AboutDialog } from "@/components/AboutDialog";
 import { LocationAutocomplete } from "@/components/LocationAutocomplete";
 import { climateAnalysisSchema } from "@/lib/validations";
+import InteractiveMap from "@/components/InteractiveMap";
+import QueryHistoryList from "@/components/QueryHistoryList";
+import { saveQueryToHistory } from "@/services/queryHistory";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -22,6 +26,58 @@ const Index = () => {
   const [eventType, setEventType] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [locationCoordinates, setLocationCoordinates] = useState<{ lat: number; lon: number } | null>(null);
+  const [isGeocodingLocation, setIsGeocodingLocation] = useState(false);
+
+  // Geocode location when it changes
+  useEffect(() => {
+    const geocodeLocation = async () => {
+      if (!location || location.length < 3) {
+        setLocationCoordinates(null);
+        return;
+      }
+
+      setIsGeocodingLocation(true);
+      
+      try {
+        // Clean up location string
+        const cleanLocation = location
+          .replace(/\s*,\s*BRA$/i, ', Brazil')
+          .replace(/\s*,\s*BR$/i, ', Brazil')
+          .trim();
+        
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanLocation)}&format=json&limit=1&accept-language=pt-BR,pt,en`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'WeatherWise-Planner/1.0'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data && data.length > 0) {
+            setLocationCoordinates({
+              lat: parseFloat(data[0].lat),
+              lon: parseFloat(data[0].lon)
+            });
+          } else {
+            setLocationCoordinates(null);
+          }
+        }
+      } catch (error) {
+        console.error('Geocoding error:', error);
+        setLocationCoordinates(null);
+      } finally {
+        setIsGeocodingLocation(false);
+      }
+    };
+
+    // Debounce geocoding
+    const timeoutId = setTimeout(geocodeLocation, 800);
+    return () => clearTimeout(timeoutId);
+  }, [location]);
 
   useEffect(() => {
     // Get current user
@@ -72,18 +128,40 @@ const Index = () => {
 
       setIsAnalyzing(true);
       
-      console.log('Calling climate-analysis function...');
+      console.log('Calling climate-analysis function with data:', validatedData);
       
       const { data, error } = await supabase.functions.invoke('climate-analysis', {
         body: validatedData
       });
 
+      console.log('Response:', { data, error });
+
       if (error) {
-        console.error('Edge function error:', error);
-        throw error;
+        console.error('Edge function error details:', {
+          message: error.message,
+          status: error.status,
+          statusText: error.statusText,
+          context: error.context,
+          full: error
+        });
+        throw new Error(error.message || 'Erro ao chamar a função de análise');
+      }
+
+      if (!data) {
+        throw new Error('Nenhum dado retornado pela função de análise');
       }
 
       console.log('Analysis result:', data);
+
+      // Salvar a consulta no histórico ANTES de navegar
+      if (isLoggedIn) {
+        await saveQueryToHistory({
+          location_name: validatedData.location,
+          latitude: data.location.latitude,
+          longitude: data.location.longitude,
+          query_date: validatedData.date,
+        });
+      }
       
       // Navigate to results page with the data
       navigate("/results", { state: { analysisData: data } });
@@ -123,6 +201,7 @@ const Index = () => {
                   {userEmail}
                 </span>
                 <AboutDialog />
+                <ThemeToggle />
                 <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl">
                   <LogOut className="w-4 h-4" />
                   Sair
@@ -131,6 +210,7 @@ const Index = () => {
             ) : (
               <>
                 <AboutDialog />
+                <ThemeToggle />
                 <Button variant="hero" size="sm" onClick={() => navigate("/auth")} className="rounded-xl shadow-glow-primary">
                   Entrar
                 </Button>
@@ -141,29 +221,29 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <main className="container mx-auto px-4 py-20">
-        <div className="max-w-4xl mx-auto space-y-12">
+      <main className="container mx-auto px-4 pt-4 pb-6 md:py-20">
+        <div className="max-w-4xl mx-auto space-y-4 md:space-y-12">
           {/* Hero Text */}
-          <div className="text-center space-y-6 animate-fade-in">
+          <div className="text-center space-y-3 md:space-y-6 animate-fade-in">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 glass-effect rounded-full text-sm text-primary font-semibold mb-2 shadow-glow-primary">
               <Sparkles className="w-4 h-4 animate-float" />
               NASA Space Apps Challenge 2025
             </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight leading-tight">
               Descubra as Probabilidades
               <br />
               <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent animate-gradient">
                 Climáticas do Seu Evento
               </span>
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Use décadas de dados de observação da Terra da NASA para planejar eventos, 
               atividades agrícolas e muito mais com <span className="font-semibold text-foreground">precisão sem precedentes.</span>
             </p>
           </div>
 
           {/* Search Form */}
-          <Card className="glass-effect-strong p-10 shadow-2xl animate-slide-up hover-lift rounded-2xl border-2">
+          <Card className="glass-effect-strong p-4 md:p-10 shadow-2xl animate-slide-up hover-lift rounded-2xl border-2">
             <div className="space-y-8">
               <div className="space-y-2">
                 <Label htmlFor="location" className="text-base font-semibold">
@@ -175,6 +255,16 @@ const Index = () => {
                   disabled={isAnalyzing}
                 />
               </div>
+
+              {/* Interactive Map */}
+              {location && (
+                <div className="animate-fade-in">
+                  <InteractiveMap 
+                    locationName={location} 
+                    coordinates={locationCoordinates}
+                  />
+                </div>
+              )}
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -257,7 +347,7 @@ const Index = () => {
           </Card>
 
           {/* Features */}
-          <div className="grid md:grid-cols-3 gap-8 pt-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 pt-8 md:pt-12">
             <div className="text-center space-y-3 animate-fade-in glass-effect p-6 rounded-2xl hover-lift">
               <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-primary">
                 <Cloud className="w-8 h-8 text-white" />
@@ -289,9 +379,16 @@ const Index = () => {
         </div>
       </main>
 
+      {/* Query History Section */}
+      {isLoggedIn && (
+        <div className="max-w-4xl mx-auto px-4 pb-8 md:pb-12">
+          <QueryHistoryList />
+        </div>
+      )}
+
       {/* Footer */}
-      <footer className="border-t border-border/50 mt-20">
-        <div className="container mx-auto px-4 py-8 text-center text-sm text-muted-foreground">
+      <footer className="border-t border-border/50 mt-8 md:mt-20">
+        <div className="container mx-auto px-4 py-6 md:py-8 text-center text-sm text-muted-foreground">
           <p>Desenvolvido para o NASA Space Apps Challenge 2025</p>
           <p className="mt-2">Dados fornecidos pela NASA Earth Observations</p>
         </div>
