@@ -6,9 +6,11 @@ interface AlternativeDateProps {
   rainProbability: number;
   temperature: number;
   icp: number;
+  isSelected?: boolean;
+  onClick?: () => void;
 }
 
-export const AlternativeDate = ({ date, rainProbability, temperature, icp }: AlternativeDateProps) => {
+export const AlternativeDate = ({ date, rainProbability, temperature, icp, isSelected, onClick }: AlternativeDateProps) => {
   const getICPColor = (icp: number) => {
     if (icp >= 80) return "text-success";
     if (icp >= 60) return "text-warning";
@@ -22,7 +24,12 @@ export const AlternativeDate = ({ date, rainProbability, temperature, icp }: Alt
   };
 
   return (
-    <Card className="glass-effect p-5 hover:shadow-lg transition-all cursor-pointer group">
+    <Card 
+      className={`glass-effect p-5 hover:shadow-lg transition-all cursor-pointer group ${
+        isSelected ? "ring-2 ring-primary shadow-glow" : ""
+      }`}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
