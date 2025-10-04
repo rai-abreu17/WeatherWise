@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -6,11 +6,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Cloud, MapPin, Calendar, Sparkles } from "lucide-react";
+import { Cloud, MapPin, Calendar, Sparkles, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Index = () => {
   const navigate = useNavigate();
   const [temperature, setTemperature] = useState([25]);
+  const [userEmail, setUserEmail] = useState("");
+
+  useEffect(() => {
+    // Get current user
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email || "");
+      }
+    };
+    getUser();
+  }, []);
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Erro ao sair");
+    } else {
+      toast.success("Você saiu da conta");
+      navigate("/auth");
+    }
+  };
 
   const handleAnalyze = () => {
     navigate("/results");
@@ -30,8 +54,14 @@ const Index = () => {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground hidden md:block">
+              {userEmail}
+            </span>
             <Button variant="ghost" size="sm">Sobre</Button>
-            <Button variant="outline" size="sm">Entrar</Button>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4" />
+              Sair
+            </Button>
           </div>
         </div>
       </header>

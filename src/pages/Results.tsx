@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,8 +14,11 @@ import {
   Sun, 
   TrendingUp, 
   ArrowLeft,
-  Calendar
+  Calendar,
+  LogOut
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface DateData {
   date: string;
@@ -108,6 +111,16 @@ const Results = () => {
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const currentData = mockDates[selectedDateIndex];
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Erro ao sair");
+    } else {
+      toast.success("Você saiu da conta");
+      navigate("/auth");
+    }
+  };
+
   return (
     <div className="min-h-screen gradient-hero">
       {/* Header */}
@@ -127,9 +140,14 @@ const Results = () => {
               </span>
             </div>
           </div>
-          <Button variant="hero" size="sm" onClick={() => navigate("/")}>
-            Nova Consulta
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="hero" size="sm" onClick={() => navigate("/")}>
+              Nova Consulta
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
