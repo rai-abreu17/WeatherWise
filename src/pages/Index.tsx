@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { Cloud, MapPin, Calendar, Sparkles, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AboutDialog } from "@/components/AboutDialog";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ const Index = () => {
             <span className="text-sm text-muted-foreground hidden md:block">
               {userEmail}
             </span>
-            <Button variant="ghost" size="sm">Sobre</Button>
+            <AboutDialog />
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4" />
               Sair

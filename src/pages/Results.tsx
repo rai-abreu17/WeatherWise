@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { MetricCard } from "@/components/MetricCard";
 import { ComfortIndex } from "@/components/ComfortIndex";
 import { AlternativeDate } from "@/components/AlternativeDate";
+import { AboutDialog } from "@/components/AboutDialog";
 import { 
   Cloud, 
   CloudRain, 
@@ -141,6 +142,7 @@ const Results = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <AboutDialog />
             <Button variant="hero" size="sm" onClick={() => navigate("/")}>
               Nova Consulta
             </Button>
