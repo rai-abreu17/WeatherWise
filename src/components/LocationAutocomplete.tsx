@@ -98,10 +98,37 @@ export const LocationAutocomplete = ({ value, onChange, disabled }: LocationAuto
     setIsGettingLocation(true);
     
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
-        onChange(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-        toast.success("Localização obtida com sucesso!");
+        
+        try {
+          // Reverse geocoding to get location name
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=pt-BR,pt,en`,
+            {
+              headers: {
+                'User-Agent': 'WeatherWise-Planner/1.0'
+              }
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            // Use display_name which gives a full formatted address
+            onChange(data.display_name);
+            toast.success("Localização obtida com sucesso!");
+          } else {
+            // Fallback to coordinates if reverse geocoding fails
+            onChange(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+            toast.success("Localização obtida (coordenadas)");
+          }
+        } catch (error) {
+          console.error('Reverse geocoding error:', error);
+          // Fallback to coordinates
+          onChange(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+          toast.success("Localização obtida (coordenadas)");
+        }
+        
         setIsGettingLocation(false);
       },
       (error) => {
