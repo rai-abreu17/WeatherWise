@@ -30,7 +30,7 @@ serve(async (req) => {
     const { location, date, eventType, preferredTemperature }: ClimateRequest = await req.json();
     console.log('Processing climate analysis for:', { location, date, eventType });
 
-    const NASA_API_KEY = Deno.env.get('NASA_API_KEY');
+    const NASA_API_KEY = Deno.env.get('NASA_API_KEY_NEW');
     if (!NASA_API_KEY) {
       throw new Error('NASA_API_KEY not configured');
     }
