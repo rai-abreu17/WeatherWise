@@ -1,1 +1,4 @@
 project_id = "xcjfrlfqkcwazqabtbrw"
+
+[functions.climate-analysis]
+verify_jwt = true

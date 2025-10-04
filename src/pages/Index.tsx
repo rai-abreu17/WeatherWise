@@ -10,11 +10,16 @@ import { Cloud, MapPin, Calendar, Sparkles, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AboutDialog } from "@/components/AboutDialog";
+import { climateAnalysisSchema } from "@/lib/validations";
 
 const Index = () => {
   const navigate = useNavigate();
   const [temperature, setTemperature] = useState([25]);
   const [userEmail, setUserEmail] = useState("");
+  const [location, setLocation] = useState("");
+  const [date, setDate] = useState("");
+  const [eventType, setEventType] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     // Get current user
@@ -37,8 +42,47 @@ const Index = () => {
     }
   };
 
-  const handleAnalyze = () => {
-    navigate("/results");
+  const handleAnalyze = async () => {
+    // Validate inputs using Zod
+    try {
+      const validatedData = climateAnalysisSchema.parse({
+        location: location,
+        date: date,
+        eventType: eventType,
+        preferredTemperature: temperature[0]
+      });
+
+      setIsAnalyzing(true);
+      
+      console.log('Calling climate-analysis function...');
+      
+      const { data, error } = await supabase.functions.invoke('climate-analysis', {
+        body: validatedData
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
+
+      console.log('Analysis result:', data);
+      
+      // Navigate to results page with the data
+      navigate("/results", { state: { analysisData: data } });
+      
+    } catch (error: any) {
+      console.error('Error:', error);
+      
+      // Handle Zod validation errors
+      if (error.errors && Array.isArray(error.errors)) {
+        const firstError = error.errors[0];
+        toast.error(firstError.message);
+      } else {
+        toast.error("Erro ao analisar dados climáticos. Por favor, tente novamente.");
+      }
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -102,6 +146,8 @@ const Index = () => {
                     id="location"
                     placeholder="Digite cidade, estado ou coordenadas"
                     className="pl-10 h-12 text-base"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
                   />
                 </div>
               </div>
@@ -117,6 +163,9 @@ const Index = () => {
                       id="date"
                       type="date"
                       className="pl-10 h-12 text-base"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
                     />
                   </div>
                 </div>
@@ -125,7 +174,7 @@ const Index = () => {
                   <Label htmlFor="event-type" className="text-base font-semibold">
                     Tipo de Evento
                   </Label>
-                  <Select>
+                  <Select value={eventType} onValueChange={setEventType}>
                     <SelectTrigger className="h-12 text-base">
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
@@ -170,9 +219,10 @@ const Index = () => {
                 size="lg" 
                 className="w-full h-14 text-lg"
                 onClick={handleAnalyze}
+                disabled={isAnalyzing}
               >
                 <Sparkles className="w-5 h-5" />
-                Analisar Probabilidades Climáticas
+                {isAnalyzing ? "Analisando..." : "Analisar Probabilidades Climáticas"}
               </Button>
 
               <p className="text-center text-sm text-muted-foreground">

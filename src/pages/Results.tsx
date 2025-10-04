@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard } from "@/components/MetricCard";
@@ -39,78 +39,41 @@ interface DateData {
   alertMessage?: string;
 }
 
-const mockDates: DateData[] = [
-  {
-    date: "2025-06-15",
-    displayDate: "15 de Junho de 2025",
-    icp: 78,
-    rainProbability: 35,
-    temperature: 24,
-    temperatureRange: "20°C - 28°C",
-    windSpeed: 12,
-    windDescription: "Vento moderado, condições normais",
-    humidity: 68,
-    humidityDescription: "Umidade confortável",
-    cloudCover: 45,
-    cloudDescription: "Parcialmente nublado",
-    extremeEvents: 5,
-    extremeDescription: "Baixa probabilidade de extremos",
-    alertMessage: "A probabilidade de chuva aumentou 12% na última década nesta região durante este período. Recomendamos fortemente considerar um plano B coberto ou datas alternativas."
-  },
-  {
-    date: "2025-06-08",
-    displayDate: "08 de Junho de 2025",
-    icp: 85,
-    rainProbability: 20,
-    temperature: 23,
-    temperatureRange: "19°C - 27°C",
-    windSpeed: 10,
-    windDescription: "Vento fraco, condições excelentes",
-    humidity: 62,
-    humidityDescription: "Umidade ideal",
-    cloudCover: 30,
-    cloudDescription: "Poucas nuvens",
-    extremeEvents: 3,
-    extremeDescription: "Probabilidade mínima de extremos",
-  },
-  {
-    date: "2025-06-22",
-    displayDate: "22 de Junho de 2025",
-    icp: 82,
-    rainProbability: 25,
-    temperature: 22,
-    temperatureRange: "18°C - 26°C",
-    windSpeed: 11,
-    windDescription: "Vento fraco a moderado",
-    humidity: 65,
-    humidityDescription: "Umidade confortável",
-    cloudCover: 35,
-    cloudDescription: "Parcialmente nublado",
-    extremeEvents: 4,
-    extremeDescription: "Baixa probabilidade de extremos",
-  },
-  {
-    date: "2025-06-29",
-    displayDate: "29 de Junho de 2025",
-    icp: 80,
-    rainProbability: 28,
-    temperature: 24,
-    temperatureRange: "20°C - 28°C",
-    windSpeed: 13,
-    windDescription: "Vento moderado",
-    humidity: 66,
-    humidityDescription: "Umidade confortável",
-    cloudCover: 40,
-    cloudDescription: "Parcialmente nublado",
-    extremeEvents: 4,
-    extremeDescription: "Baixa probabilidade de extremos",
-  }
-];
-
 const Results = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
-  const currentData = mockDates[selectedDateIndex];
+  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Get analysis data from navigation state
+    const data = location.state?.analysisData;
+    
+    if (!data) {
+      toast.error("Nenhum dado de análise encontrado");
+      navigate("/");
+      return;
+    }
+    
+    setAnalysisData(data);
+    setIsLoading(false);
+  }, [location, navigate]);
+
+  if (isLoading || !analysisData) {
+    return (
+      <div className="min-h-screen gradient-hero flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Cloud className="w-16 h-16 animate-pulse mx-auto text-primary" />
+          <p className="text-lg text-muted-foreground">Carregando análise climática...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Get current date data based on selection (0 = requested date, 1+ = alternatives)
+  const allDates = [analysisData.requestedDate, ...analysisData.alternativeDates];
+  const currentData = allDates[selectedDateIndex];
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -160,7 +123,7 @@ const Results = () => {
           <div className="animate-fade-in">
             <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <Calendar className="w-4 h-4" />
-              <span className="text-sm">São Paulo, SP • {currentData.displayDate} • Casamento</span>
+              <span className="text-sm">{analysisData.location.name} • {currentData.displayDate}</span>
             </div>
             <h1 className="text-4xl font-bold">Análise Climática Completa</h1>
           </div>
@@ -246,10 +209,10 @@ const Results = () => {
             </div>
             <Card className="glass-effect p-6">
               <p className="text-muted-foreground mb-4">
-                Baseado em dados históricos, estas datas têm melhores condições climáticas:
+                Baseado em dados históricos de {analysisData.dataSource.period}, estas datas têm melhores condições climáticas:
               </p>
               <div className="space-y-3">
-                {mockDates.map((dateData, index) => (
+                {allDates.map((dateData, index) => (
                   <AlternativeDate
                     key={dateData.date}
                     date={dateData.displayDate}
@@ -271,9 +234,9 @@ const Results = () => {
           <div className="text-center py-8">
             <Card className="glass-effect inline-block px-8 py-4">
               <p className="text-sm text-muted-foreground">
-                Análise baseada em dados históricos de 2000-2024
+                Análise baseada em {analysisData.dataSource.yearsAnalyzed} anos de dados históricos ({analysisData.dataSource.period})
                 <br />
-                <span className="font-semibold text-foreground">NASA Earth Observations • POWER Data Access Viewer</span>
+                <span className="font-semibold text-foreground">{analysisData.dataSource.provider}</span>
               </p>
             </Card>
           </div>
