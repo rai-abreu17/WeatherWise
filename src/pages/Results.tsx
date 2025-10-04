@@ -127,7 +127,7 @@ const Results = () => {
               </span>
             </div>
           </div>
-          <Button variant="hero" size="sm">
+          <Button variant="hero" size="sm" onClick={() => navigate("/")}>
             Nova Consulta
           </Button>
         </div>
