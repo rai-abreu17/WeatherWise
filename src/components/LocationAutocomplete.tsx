@@ -17,6 +17,28 @@ interface LocationAutocompleteProps {
   disabled?: boolean;
 }
 
+// Helper function to clean location names
+const cleanLocationName = (displayName: string): string => {
+  // Remove common unnecessary geographical terms
+  const termsToRemove = [
+    /Região Geográfica Imediata de [^,]+,?\s*/gi,
+    /Região Geográfica Intermediária de [^,]+,?\s*/gi,
+    /Região Metropolitana de [^,]+,?\s*/gi,
+    /Microrregião de [^,]+,?\s*/gi,
+    /Mesorregião de [^,]+,?\s*/gi,
+  ];
+  
+  let cleaned = displayName;
+  termsToRemove.forEach(term => {
+    cleaned = cleaned.replace(term, '');
+  });
+  
+  // Clean up multiple commas and spaces
+  cleaned = cleaned.replace(/,\s*,/g, ',').replace(/,\s*$/g, '').trim();
+  
+  return cleaned;
+};
+
 export const LocationAutocomplete = ({ value, onChange, disabled }: LocationAutocompleteProps) => {
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -84,7 +106,8 @@ export const LocationAutocomplete = ({ value, onChange, disabled }: LocationAuto
   };
 
   const handleSelectSuggestion = (suggestion: LocationSuggestion) => {
-    onChange(suggestion.display_name);
+    const cleanedName = cleanLocationName(suggestion.display_name);
+    onChange(cleanedName);
     setSuggestions([]);
     setShowSuggestions(false);
   };
@@ -114,8 +137,9 @@ export const LocationAutocomplete = ({ value, onChange, disabled }: LocationAuto
 
           if (response.ok) {
             const data = await response.json();
-            // Use display_name which gives a full formatted address
-            onChange(data.display_name);
+            // Use display_name which gives a full formatted address, but clean it
+            const cleanedName = cleanLocationName(data.display_name);
+            onChange(cleanedName);
             toast.success("Localização obtida com sucesso!");
           } else {
             // Fallback to coordinates if reverse geocoding fails
@@ -190,7 +214,7 @@ export const LocationAutocomplete = ({ value, onChange, disabled }: LocationAuto
               onClick={() => handleSelectSuggestion(suggestion)}
             >
               <MapPin className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0" />
-              <span className="text-sm text-foreground">{suggestion.display_name}</span>
+              <span className="text-sm text-foreground">{cleanLocationName(suggestion.display_name)}</span>
             </button>
           ))}
         </div>
