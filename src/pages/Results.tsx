@@ -16,7 +16,8 @@ import {
   TrendingUp, 
   ArrowLeft,
   Calendar,
-  LogOut
+  LogOut,
+  User
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,8 +46,16 @@ const Results = () => {
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
+    // Check if user is logged in
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsLoggedIn(!!user);
+    };
+    checkAuth();
+    
     // Get analysis data from navigation state
     const data = location.state?.analysisData;
     
@@ -109,9 +118,16 @@ const Results = () => {
             <Button variant="hero" size="sm" onClick={() => navigate("/")}>
               Nova Consulta
             </Button>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4" />
-            </Button>
+            {isLoggedIn ? (
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4" />
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => navigate("/auth")}>
+                <User className="w-4 h-4" />
+                Entrar
+              </Button>
+            )}
           </div>
         </div>
       </header>

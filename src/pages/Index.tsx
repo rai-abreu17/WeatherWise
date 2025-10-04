@@ -21,6 +21,7 @@ const Index = () => {
   const [date, setDate] = useState("");
   const [eventType, setEventType] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     // Get current user
@@ -28,9 +29,25 @@ const Index = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserEmail(user.email || "");
+        setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
       }
     };
     getUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUserEmail(session.user.email || "");
+        setIsLoggedIn(true);
+      } else {
+        setUserEmail("");
+        setIsLoggedIn(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleLogout = async () => {
@@ -100,14 +117,25 @@ const Index = () => {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground hidden md:block">
-              {userEmail}
-            </span>
-            <AboutDialog />
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4" />
-              Sair
-            </Button>
+            {isLoggedIn ? (
+              <>
+                <span className="text-sm text-muted-foreground hidden md:block">
+                  {userEmail}
+                </span>
+                <AboutDialog />
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  <LogOut className="w-4 h-4" />
+                  Sair
+                </Button>
+              </>
+            ) : (
+              <>
+                <AboutDialog />
+                <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
+                  Entrar
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
