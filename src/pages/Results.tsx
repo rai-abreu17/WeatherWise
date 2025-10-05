@@ -100,7 +100,10 @@ const Results = () => {
     const data = location.state?.analysisData;
     
     if (!data) {
-      toast.error("Nenhum dado de análise encontrado");
+      toast.error("Nenhum dado de análise encontrado. Por favor, faça uma nova consulta.", {
+        duration: 5000,
+        icon: <Cloud className="w-5 h-5 text-destructive" />
+      });
       navigate("/");
       return;
     }

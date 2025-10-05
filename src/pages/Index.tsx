@@ -128,7 +128,10 @@ const Index = () => {
   const handleAnalyze = async () => {
     // Validate inputs
     if (selectedLocations.length === 0) {
-      toast.error("Por favor, selecione pelo menos uma localização.");
+      toast.error("Por favor, adicione pelo menos uma localização clicando no botão '+' após selecionar o endereço.", {
+        duration: 5000,
+        icon: <Plus className="w-5 h-5 text-destructive" />
+      });
       return;
     }
 
@@ -344,11 +347,15 @@ const Index = () => {
                     type="button"
                     onClick={handleAddLocation}
                     disabled={!pendingLocation || isAnalyzing}
-                    className="h-12 px-4 rounded-xl shadow-glow-primary"
+                    className="h-12 px-4 rounded-xl shadow-glow-primary relative"
                     variant="hero"
                     aria-label="Adicionar localização à lista"
+                    title="Adicionar esta localização à lista (obrigatório)"
                   >
                     <Plus className="w-5 h-5" aria-hidden="true" />
+                    {selectedLocations.length === 0 && (
+                      <span className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground w-4 h-4 rounded-full flex items-center justify-center text-xs animate-pulse">!</span>
+                    )}
                   </Button>
                 </div>
                 {/* Tags de localizações selecionadas */}
@@ -378,7 +385,7 @@ const Index = () => {
                 {/* Hint text */}
                 <p className="text-xs text-muted-foreground mt-2" id="location-hint" role="status" aria-live="polite">
                   {selectedLocations.length === 0 
-                    ? "Adicione pelo menos uma localização para comparar" 
+                    ? "Adicione pelo menos uma localização clicando no botão '+'" 
                     : `${selectedLocations.length} localização${selectedLocations.length > 1 ? 'ões' : ''} adicionada${selectedLocations.length > 1 ? 's' : ''}`
                   }
                 </p>
@@ -388,8 +395,7 @@ const Index = () => {
               {selectedLocations.length > 0 && (
                 <div className="animate-fade-in" role="region" aria-label="Mapa interativo da localização">
                   <InteractiveMap 
-                    locationName={selectedLocations[0].name} 
-                    coordinates={locationCoordinates}
+                    locations={selectedLocations}
                   />
                 </div>
               )}
