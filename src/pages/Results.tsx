@@ -7,7 +7,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { ComfortIndex } from "@/components/ComfortIndex";
 import { AlternativeDate } from "@/components/AlternativeDate";
 import { AboutDialog } from "@/components/AboutDialog";
-import PdfExportButton from "@/components/PdfExportButton";
+import DirectPdfExport from "@/components/DirectPdfExport";
 import ClimateChart from "@/components/ClimateChart";
 import NotificationButton from "@/components/NotificationButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -39,41 +39,17 @@ const formatLocationName = (fullName: string): { short: string; full: string } =
   
   // Strategy for Brazilian addresses:
   // Typical format: "Street, Neighborhood, City, State, Postal Code, Country"
-  // We want to show: "City, State" or "City, Country" for international
+  // Agora queremos mostrar: "Rua, Bairro" para a versão curta
   
   let shortName: string;
   
   if (parts.length <= 2) {
     // Already short enough
     shortName = fullName;
-  } else if (parts.length === 3) {
-    // "City, State, Country" -> "City, State"
+  } else if (parts.length >= 3) {
+    // Para qualquer endereço com 3+ partes, 
+    // sempre pegamos as duas primeiras partes (Rua, Bairro)
     shortName = `${parts[0]}, ${parts[1]}`;
-  } else if (parts.length >= 4) {
-    // For long addresses, try to identify city and state
-    // Brazilian pattern: [..., City, State, Postal Code, Country]
-    // or [..., City, State, Country]
-    
-    // Check if last part is "Brasil" (country)
-    const isBrazil = parts[parts.length - 1].toLowerCase().includes('brasil');
-    
-    if (isBrazil) {
-      // Check if second-to-last is postal code (contains numbers)
-      const hasPostalCode = /\d/.test(parts[parts.length - 2]);
-      
-      if (hasPostalCode && parts.length >= 4) {
-        // Format: [..., City, State, Postal, Brasil] -> "City, State"
-        shortName = `${parts[parts.length - 4]}, ${parts[parts.length - 3]}`;
-      } else if (parts.length >= 3) {
-        // Format: [..., City, State, Brasil] -> "City, State"
-        shortName = `${parts[parts.length - 3]}, ${parts[parts.length - 2]}`;
-      } else {
-        shortName = `${parts[0]}, ${parts[parts.length - 1]}`;
-      }
-    } else {
-      // International or unknown format: show first and last
-      shortName = `${parts[0]}, ${parts[parts.length - 1]}`;
-    }
   } else {
     shortName = fullName;
   }
@@ -199,7 +175,11 @@ const Results = () => {
           </div>
           <nav className="flex items-center gap-3" aria-label="Ações e navegação">
             <AboutDialog />
-            <PdfExportButton rootElementId="report-content" fileName="relatorio-event-sky-insight.pdf" buttonText="Exportar PDF" />
+            <DirectPdfExport 
+              analysisData={allAnalysisData}
+              fileName={`relatorio-${currentAnalysis.location.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf`}
+              buttonText="Exportar PDF"
+            />
             <Button variant="hero" size="sm" onClick={() => navigate("/")} className="rounded-xl shadow-glow-primary" aria-label="Iniciar nova consulta">
               Nova Consulta
             </Button>
@@ -219,8 +199,7 @@ const Results = () => {
       </header>
 
       {/* Results Content */}
-      <div id="report-content">
-        <main id="main-content" className="container mx-auto px-4 py-12">
+      <main id="main-content" className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Title */}
           <h1 className="text-4xl md:text-5xl font-extrabold text-center mb-8 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
@@ -284,7 +263,7 @@ const Results = () => {
                       <NotificationButton locationName={analysis.location.name} />
                     </div>
                     <h2 className="text-4xl font-extrabold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent" title={fullName}>
-                      Análise para {shortName}
+                      Análise para {fullName}
                     </h2>
                   </div>
 
@@ -418,6 +397,9 @@ const Results = () => {
                       </div>
                       <NotificationButton locationName={currentAnalysis.location.name} />
                     </div>
+                    <h2 className="text-4xl font-extrabold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent" title={fullName}>
+                      Análise para {fullName}
+                    </h2>
                   </div>
 
               {/* Comfort Index */}
@@ -545,7 +527,6 @@ const Results = () => {
             </Card>
           </div>
         </div>
-        </main>
 
         {/* Footer */}
         <footer className="border-t border-border/50 mt-12">
@@ -554,7 +535,7 @@ const Results = () => {
             <p className="mt-2">Dados fornecidos pela NASA Earth Observations</p>
           </div>
         </footer>
-      </div>
+      </main>
     </div>
   );
 };

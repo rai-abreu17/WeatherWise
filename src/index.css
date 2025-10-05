@@ -433,3 +433,154 @@ th {
     min-width: 44px;
   }
 }
+
+/* ========================================
+   MODO DE IMPRESSÃO PDF
+   ======================================== */
+
+/* Estilos para o modo de impressão PDF - Remove gradientes e efeitos complexos */
+.print-friendly-mode {
+  /* Remover todos os gradientes de fundo */
+  background: #ffffff !important;
+  color: #1E293B !important;
+}
+
+/* Substituir textos com gradiente por cor sólida */
+.print-friendly-mode h1,
+.print-friendly-mode h2,
+.print-friendly-mode h3,
+.print-friendly-mode h4,
+.print-friendly-mode h5,
+.print-friendly-mode h6,
+.print-friendly-mode .bg-clip-text,
+.print-friendly-mode .text-transparent {
+  background: none !important;
+  background-clip: initial !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+  color: #1E293B !important;
+  text-shadow: none !important;
+}
+
+/* Substituir cards com efeito de vidro por fundo sólido */
+.print-friendly-mode .glass-effect,
+.print-friendly-mode .glass-effect-strong {
+  background-color: #F8FAFC !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #CBD5E1 !important;
+}
+
+/* Simplificar sombras para renderização mais limpa */
+.print-friendly-mode .shadow-glow,
+.print-friendly-mode .shadow-glow-primary,
+.print-friendly-mode .shadow-glow-secondary,
+.print-friendly-mode [class*="shadow-"] {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Garantir que botões sejam visíveis com cores sólidas */
+.print-friendly-mode button:not(.print-export-button),
+.print-friendly-mode .button:not(.print-export-button) {
+  background-color: #3B82F6 !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Garantir legibilidade de textos em cards */
+.print-friendly-mode .text-muted-foreground {
+  color: #64748B !important;
+}
+
+.print-friendly-mode .text-foreground {
+  color: #1E293B !important;
+}
+
+/* Remover animações que podem causar problemas na captura */
+.print-friendly-mode .animate-pulse,
+.print-friendly-mode .animate-spin,
+.print-friendly-mode .animate-bounce,
+.print-friendly-mode .animate-ping,
+.print-friendly-mode .animate-fade-in,
+.print-friendly-mode .animate-slide-up,
+.print-friendly-mode [class*="animate-"] {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Ocultar o próprio botão de exportação no PDF */
+.print-friendly-mode .print-export-button {
+  display: none !important;
+}
+
+/* Simplificar badges e elementos decorativos */
+.print-friendly-mode .badge,
+.print-friendly-mode [class*="rounded-full"] {
+  background-color: #E0F2FE !important;
+  color: #0369A1 !important;
+  border-radius: 4px !important;
+}
+
+/* Garantir que o gradiente de header seja sólido */
+.print-friendly-mode header {
+  background: #1E293B !important;
+}
+
+.print-friendly-mode header * {
+  color: #FFFFFF !important;
+}
+
+/* Cards e containers com fundo */
+.print-friendly-mode [class*="bg-gradient"] {
+  background: #F8FAFC !important;
+  color: #1E293B !important;
+}
+
+/* Garantir visibilidade de ícones */
+.print-friendly-mode svg {
+  opacity: 1 !important;
+}
+
+/* Remover transformações 3D que podem causar problemas */
+.print-friendly-mode [class*="transform"],
+.print-friendly-mode [class*="transition"] {
+  transform: none !important;
+  transition: none !important;
+}
+
+/* Garantir que charts sejam renderizados corretamente */
+.print-friendly-mode .recharts-wrapper {
+  background: #FFFFFF !important;
+}
+
+/* Melhorar contraste para texto em cards */
+.print-friendly-mode .card,
+.print-friendly-mode [class*="card"] {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #1E293B !important;
+}
+
+/* Simplificar o índice de conforto (ComfortIndex) */
+.print-friendly-mode .comfort-index {
+  background: #FFFFFF !important;
+  border: 2px solid #E2E8F0 !important;
+}
+
+/* Garantir que tabelas sejam legíveis */
+.print-friendly-mode table {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+}
+
+.print-friendly-mode th {
+  background: #F1F5F9 !important;
+  color: #1E293B !important;
+  font-weight: 600 !important;
+}
+
+.print-friendly-mode td {
+  color: #475569 !important;
+}

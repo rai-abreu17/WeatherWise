@@ -27,36 +27,51 @@ const PdfExportButton: React.FC<PdfExportButtonProps> = ({
     }
 
     setIsGenerating(true);
-    toast.info('Gerando PDF... Aguarde alguns segundos');
+    toast.info('Gerando PDF...');
 
     try {
-      // Aguarda um pequeno delay para garantir que todos os elementos estejam renderizados
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Criar um clone do elemento para não afetar a tela visível
+      const clone = input.cloneNode(true) as HTMLElement;
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      clone.classList.add('print-friendly-mode');
+      document.body.appendChild(clone);
 
-      const canvas = await html2canvas(input, {
-        scale: 2, // Aumenta a escala para melhor qualidade
-        useCORS: true, // Habilita o uso de CORS para imagens externas
-        allowTaint: true, // Permite elementos externos
-        backgroundColor: '#ffffff', // Define fundo branco
-        logging: false, // Desabilita logs no console
-        imageTimeout: 0, // Remove timeout para carregamento de imagens
-        windowWidth: input.scrollWidth, // Captura toda a largura
-        windowHeight: input.scrollHeight, // Captura toda a altura
+      // Aguardar apenas um frame de renderização (muito mais rápido)
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
       });
 
+      // Remover o clone
+      document.body.removeChild(clone);
+
       const imgData = canvas.toDataURL('image/png');
+      
+      if (imgData === 'data:,' || imgData.length < 100) {
+        throw new Error('Canvas vazio - nenhum conteúdo foi capturado');
+      }
+
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgWidth = 210; // Largura A4 em mm
       const pageHeight = 297; // Altura A4 em mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
+      
+      // Adicionar imagem ao PDF
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      // Se o conteúdo for maior que uma página, adicionar páginas adicionais
+      let heightLeft = imgHeight - pageHeight;
+      let position = -pageHeight;
+      
+      while (heightLeft > 0) {
+        position = position - pageHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
@@ -73,7 +88,11 @@ const PdfExportButton: React.FC<PdfExportButtonProps> = ({
   };
 
   return (
-    <Button onClick={handleExport} disabled={isGenerating}>
+    <Button 
+      onClick={handleExport} 
+      disabled={isGenerating}
+      className="print-export-button"
+    >
       {isGenerating ? (
         <>
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
