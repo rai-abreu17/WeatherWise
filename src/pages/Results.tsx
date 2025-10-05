@@ -125,40 +125,40 @@ const Results = () => {
   return (
     <div className="min-h-screen gradient-hero">
       {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-lg bg-background/80 sticky top-0 z-50 shadow-lg">
+      <header className="border-b border-border/50 backdrop-blur-lg bg-background/80 sticky top-0 z-50 shadow-lg" role="banner">
         <div className="container mx-auto px-4 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="rounded-xl hover-lift">
-              <ArrowLeft className="w-4 h-4" />
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="rounded-xl hover-lift" aria-label="Voltar para página inicial">
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
               Voltar
             </Button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3" role="img" aria-label="Logo WeatherWise">
               <div className="p-3 gradient-primary rounded-2xl shadow-glow-primary">
-                <Cloud className="w-6 h-6 text-white" />
+                <Cloud className="w-6 h-6 text-white" aria-hidden="true" />
               </div>
               <span className="text-xl font-extrabold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 WeatherWise
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <nav className="flex items-center gap-3" aria-label="Ações e navegação">
             <AboutDialog />
             <PdfExportButton rootElementId="report-content" fileName="relatorio-event-sky-insight.pdf" buttonText="Exportar PDF" />
-            <Button variant="hero" size="sm" onClick={() => navigate("/")} className="rounded-xl shadow-glow-primary">
+            <Button variant="hero" size="sm" onClick={() => navigate("/")} className="rounded-xl shadow-glow-primary" aria-label="Iniciar nova consulta">
               Nova Consulta
             </Button>
             <ThemeToggle />
             {isLoggedIn ? (
-              <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl">
-                <LogOut className="w-4 h-4" />
+              <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl" aria-label="Sair da conta">
+                <LogOut className="w-4 h-4" aria-hidden="true" />
               </Button>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="rounded-xl">
-                <User className="w-4 h-4" />
+              <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="rounded-xl" aria-label="Entrar na sua conta">
+                <User className="w-4 h-4" aria-hidden="true" />
                 Entrar
               </Button>
             )}
-          </div>
+          </nav>
         </div>
       </header>
 
@@ -174,7 +174,12 @@ const Results = () => {
           {/* Se múltiplas localizações, usar Tabs para comparação */}
           {allAnalysisData.length > 1 ? (
             <Tabs value={currentAnalysis.location.name} className="w-full">
-              <TabsList className="grid w-full mb-8" style={{ gridTemplateColumns: `repeat(${allAnalysisData.length}, minmax(0, 1fr))` }}>
+              <TabsList 
+                className="grid w-full mb-8" 
+                style={{ gridTemplateColumns: `repeat(${allAnalysisData.length}, minmax(0, 1fr))` }}
+                role="tablist"
+                aria-label="Comparação de localizações"
+              >
                 {allAnalysisData.map((analysis, index) => (
                   <TabsTrigger 
                     key={analysis.location.name} 
@@ -184,11 +189,13 @@ const Results = () => {
                       setSelectedDateIndex(0); // Reset date selection ao mudar de localização
                     }}
                     className={`relative ${analysis.location.name === bestLocationName ? 'data-[state=active]:border-b-2 data-[state=active]:border-primary' : ''}`}
+                    role="tab"
+                    aria-label={`${analysis.location.name}${analysis.location.name === bestLocationName ? ' - Melhor opção' : ''}`}
                   >
                     <div className="flex items-center gap-2">
                       {analysis.location.name}
                       {analysis.location.name === bestLocationName && (
-                        <Trophy className="w-4 h-4 text-primary" />
+                        <Trophy className="w-4 h-4 text-primary" aria-label="Troféu - Melhor localização" />
                       )}
                     </div>
                   </TabsTrigger>
@@ -196,7 +203,7 @@ const Results = () => {
               </TabsList>
               
               {allAnalysisData.map((analysis, index) => (
-                <TabsContent key={analysis.location.name} value={analysis.location.name}>
+                <TabsContent key={analysis.location.name} value={analysis.location.name} role="tabpanel">
                   {/* Event Info */}
                   <div className="animate-fade-in glass-effect-strong p-6 rounded-2xl mb-8">
                     <div className="flex items-center justify-between gap-3 mb-3">

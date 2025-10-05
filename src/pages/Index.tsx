@@ -230,17 +230,17 @@ const Index = () => {
   return (
     <div className="min-h-screen gradient-hero">
       {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-lg bg-background/80 sticky top-0 z-50 shadow-lg">
+      <header className="border-b border-border/50 backdrop-blur-lg bg-background/80 sticky top-0 z-50 shadow-lg" role="banner">
         <div className="container mx-auto px-4 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" role="img" aria-label="Logo WeatherWise">
             <div className="p-3 gradient-primary rounded-2xl shadow-glow-primary">
-              <Cloud className="w-7 h-7 text-white" />
+              <Cloud className="w-7 h-7 text-white" aria-hidden="true" />
             </div>
             <span className="text-2xl font-extrabold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               WeatherWise
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <nav className="flex items-center gap-3" aria-label="Navegação principal">
             {isLoggedIn ? (
               <>
                 <span className="text-sm font-medium text-muted-foreground hidden md:block glass-effect px-4 py-2 rounded-xl">
@@ -248,8 +248,14 @@ const Index = () => {
                 </span>
                 <AboutDialog />
                 <ThemeToggle />
-                <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl">
-                  <LogOut className="w-4 h-4" />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleLogout} 
+                  className="rounded-xl"
+                  aria-label="Sair da conta"
+                >
+                  <LogOut className="w-4 h-4" aria-hidden="true" />
                   Sair
                 </Button>
               </>
@@ -257,12 +263,18 @@ const Index = () => {
               <>
                 <AboutDialog />
                 <ThemeToggle />
-                <Button variant="hero" size="sm" onClick={() => navigate("/auth")} className="rounded-xl shadow-glow-primary">
+                <Button 
+                  variant="hero" 
+                  size="sm" 
+                  onClick={() => navigate("/auth")} 
+                  className="rounded-xl shadow-glow-primary"
+                  aria-label="Entrar na sua conta"
+                >
                   Entrar
                 </Button>
               </>
             )}
-          </div>
+          </nav>
         </div>
       </header>
 
@@ -290,8 +302,14 @@ const Index = () => {
 
           {/* Search Form */}
           <Card className="glass-effect-strong p-4 md:p-10 shadow-2xl animate-slide-up hover-lift rounded-2xl border-2">
-            <div className="space-y-8">
-              <div className="space-y-2">
+            <form 
+              className="space-y-8" 
+              role="search" 
+              aria-label="Formulário de análise climática"
+              onSubmit={(e) => { e.preventDefault(); handleAnalyze(); }}
+            >
+              <fieldset className="space-y-2">
+                <legend className="sr-only">Seleção de Localizações</legend>
                 <Label htmlFor="location" className="text-base font-semibold">
                   Localizações do Evento
                 </Label>
@@ -310,16 +328,20 @@ const Index = () => {
                     disabled={!pendingLocation || isAnalyzing}
                     className="h-12 px-4 rounded-xl shadow-glow-primary"
                     variant="hero"
-                    title="Adicionar localização"
+                    aria-label="Adicionar localização à lista"
                   >
-                    <Plus className="w-5 h-5" />
+                    <Plus className="w-5 h-5" aria-hidden="true" />
                   </Button>
                 </div>
                 {/* Tags de localizações selecionadas */}
                 {selectedLocations.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2 animate-fade-in">
+                  <div 
+                    className="flex flex-wrap gap-2 mt-2 animate-fade-in" 
+                    role="list" 
+                    aria-label="Localizações selecionadas"
+                  >
                     {selectedLocations.map(loc => (
-                      <Badge key={loc.name} variant="secondary" className="flex items-center gap-1 px-3 py-1.5 text-sm">
+                      <Badge key={loc.name} variant="secondary" className="flex items-center gap-1 px-3 py-1.5 text-sm" role="listitem">
                         {loc.name}
                         <Button
                           variant="ghost"
@@ -327,25 +349,26 @@ const Index = () => {
                           className="h-4 w-4 p-0 ml-1 hover:bg-transparent"
                           onClick={() => handleRemoveLocation(loc.name)}
                           disabled={isAnalyzing}
+                          aria-label={`Remover ${loc.name} da lista`}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       </Badge>
                     ))}
                   </div>
                 )}
                 {/* Hint text */}
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground mt-2" id="location-hint" role="status" aria-live="polite">
                   {selectedLocations.length === 0 
                     ? "Adicione pelo menos uma localização para comparar" 
                     : `${selectedLocations.length} localização${selectedLocations.length > 1 ? 'ões' : ''} adicionada${selectedLocations.length > 1 ? 's' : ''}`
                   }
                 </p>
-              </div>
+              </fieldset>
 
               {/* Interactive Map */}
               {selectedLocations.length > 0 && (
-                <div className="animate-fade-in">
+                <div className="animate-fade-in" role="region" aria-label="Mapa interativo da localização">
                   <InteractiveMap 
                     locationName={selectedLocations[0].name} 
                     coordinates={locationCoordinates}
@@ -353,13 +376,14 @@ const Index = () => {
                 </div>
               )}
 
-              <div className="grid md:grid-cols-2 gap-6">
+              <fieldset className="grid md:grid-cols-2 gap-6">
+                <legend className="sr-only">Informações do Evento</legend>
                 <div className="space-y-2">
                   <Label htmlFor="date" className="text-base font-semibold">
                     Data do Evento
                   </Label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" aria-hidden="true" />
                     <Input
                       id="date"
                       type="date"
@@ -367,6 +391,8 @@ const Index = () => {
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
+                      aria-label="Selecione a data do evento"
+                      aria-required="true"
                     />
                   </div>
                 </div>
@@ -376,7 +402,7 @@ const Index = () => {
                     Tipo de Evento
                   </Label>
                   <Select value={eventType} onValueChange={setEventType}>
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base" id="event-type" aria-label="Selecione o tipo de evento">
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
@@ -389,92 +415,102 @@ const Index = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              </fieldset>
 
-              <div className="space-y-4">
+              <fieldset className="space-y-4">
+                <legend className="sr-only">Configuração de Temperatura</legend>
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">
+                  <Label htmlFor="temperature-slider" className="text-base font-semibold">
                     Faixa de Temperatura Confortável
                   </Label>
-                  <span className="text-sm font-semibold text-primary">
+                  <span className="text-sm font-semibold text-primary" id="temperature-value" aria-live="polite">
                     {temperature[0]}°C
                   </span>
                 </div>
                 <Slider
+                  id="temperature-slider"
                   value={temperature}
                   onValueChange={setTemperature}
                   min={15}
                   max={40}
                   step={1}
                   className="py-4"
+                  aria-label="Ajuste a temperatura confortável"
+                  aria-valuemin={15}
+                  aria-valuemax={40}
+                  aria-valuenow={temperature[0]}
+                  aria-valuetext={`${temperature[0]} graus Celsius`}
                 />
-                <div className="flex justify-between text-xs text-muted-foreground">
+                <div className="flex justify-between text-xs text-muted-foreground" role="note">
                   <span>15°C - Frio</span>
                   <span>25°C - Ideal</span>
                   <span>40°C - Quente</span>
                 </div>
-              </div>
+              </fieldset>
 
               <Button 
+                type="submit"
                 variant="hero" 
                 size="lg" 
                 className="w-full h-16 text-lg font-semibold shadow-glow-primary rounded-xl"
-                onClick={handleAnalyze}
                 disabled={isAnalyzing}
+                aria-label={isAnalyzing ? "Análise em andamento" : "Iniciar análise de probabilidades climáticas"}
               >
-                <Sparkles className="w-5 h-5" />
+                <Sparkles className="w-5 h-5" aria-hidden="true" />
                 {isAnalyzing ? "Analisando..." : "Analisar Probabilidades Climáticas"}
               </Button>
 
-              <p className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-                <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+              <p className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2" role="status">
+                <span className="w-2 h-2 bg-primary rounded-full animate-pulse" aria-hidden="true"></span>
                 Análise baseada em 20+ anos de dados históricos da NASA
               </p>
-            </div>
+            </form>
           </Card>
 
           {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 pt-8 md:pt-12">
-            <div className="text-center space-y-3 animate-fade-in glass-effect p-6 rounded-2xl hover-lift">
-              <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-primary">
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 pt-8 md:pt-12" aria-label="Principais recursos">
+            <h2 className="sr-only">Recursos do WeatherWise</h2>
+            <article className="text-center space-y-3 animate-fade-in glass-effect p-6 rounded-2xl hover-lift">
+              <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-primary" aria-hidden="true">
                 <Cloud className="w-8 h-8 text-white" />
               </div>
               <h3 className="font-bold text-lg">Dados da NASA</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Décadas de observações precisas da Terra com dados validados cientificamente
               </p>
-            </div>
-            <div className="text-center space-y-3 animate-fade-in glass-effect p-6 rounded-2xl hover-lift" style={{ animationDelay: "0.1s" }}>
-              <div className="w-16 h-16 gradient-secondary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-secondary">
+            </article>
+            <article className="text-center space-y-3 animate-fade-in glass-effect p-6 rounded-2xl hover-lift" style={{ animationDelay: "0.1s" }}>
+              <div className="w-16 h-16 gradient-secondary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-secondary" aria-hidden="true">
                 <Sparkles className="w-8 h-8 text-white" />
               </div>
               <h3 className="font-bold text-lg">Análise Personalizada</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Índice de conforto baseado em suas preferências específicas
               </p>
-            </div>
-            <div className="text-center space-y-3 animate-fade-in glass-effect p-6 rounded-2xl hover-lift" style={{ animationDelay: "0.2s" }}>
-              <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-accent">
+            </article>
+            <article className="text-center space-y-3 animate-fade-in glass-effect p-6 rounded-2xl hover-lift" style={{ animationDelay: "0.2s" }}>
+              <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-accent" aria-hidden="true">
                 <Calendar className="w-8 h-8 text-white" />
               </div>
               <h3 className="font-bold text-lg">Datas Alternativas</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Sugestões inteligentes com melhores condições climáticas
               </p>
-            </div>
-          </div>
+            </article>
+          </section>
         </div>
       </main>
 
       {/* Query History Section */}
       {isLoggedIn && (
-        <div className="max-w-4xl mx-auto px-4 pb-8 md:pb-12">
+        <aside className="max-w-4xl mx-auto px-4 pb-8 md:pb-12" aria-label="Histórico de consultas">
+          <h2 className="sr-only">Histórico de Consultas Anteriores</h2>
           <QueryHistoryList />
-        </div>
+        </aside>
       )}
 
       {/* Footer */}
-      <footer className="border-t border-border/50 mt-8 md:mt-20">
+      <footer className="border-t border-border/50 mt-8 md:mt-20" role="contentinfo">
         <div className="container mx-auto px-4 py-6 md:py-8 text-center text-sm text-muted-foreground">
           <p>Desenvolvido para o NASA Space Apps Challenge 2025</p>
           <p className="mt-2">Dados fornecidos pela NASA Earth Observations</p>
