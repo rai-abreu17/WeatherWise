@@ -5,15 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Trash2, History, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import type { Tables } from "@/integrations/supabase/types";
 
-interface QueryHistoryItem {
-  id: string;
-  location_name: string;
-  latitude: number;
-  longitude: number;
-  query_date: string;
-  created_at: string;
-}
+type QueryHistoryItem = Tables<"query_history">;
 
 const QueryHistoryList: React.FC = () => {
   const [history, setHistory] = useState<QueryHistoryItem[]>([]);

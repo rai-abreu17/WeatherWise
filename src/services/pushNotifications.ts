@@ -22,7 +22,7 @@ export const savePushSubscription = async (subscription: PushSubscription) => {
     .from("push_subscriptions")
     .insert({
       user_id: user.id,
-      subscription: subscriptionData,
+      subscription: subscriptionData as any, // Json type compatible
     })
     .select();
 
@@ -69,5 +69,5 @@ export const getPushSubscriptions = async (): Promise<PushSubscriptionData[] | n
     console.error("Erro ao obter inscrições de notificação:", error);
     return null;
   }
-  return data ? data.map(item => item.subscription as PushSubscriptionData) : null;
+  return data ? data.map(item => item.subscription as unknown as PushSubscriptionData) : null;
 };

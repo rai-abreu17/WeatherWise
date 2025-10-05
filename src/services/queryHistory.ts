@@ -1,16 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
-interface QueryHistoryItem {
-  id?: string;
-  user_id?: string;
-  location_name: string;
-  latitude: number;
-  longitude: number;
-  query_date: string; // Formato YYYY-MM-DD
-  created_at?: string;
-}
+type QueryHistoryRow = Tables<"query_history">;
+type QueryHistoryInsert = TablesInsert<"query_history">;
 
-export const saveQueryToHistory = async (query: Omit<QueryHistoryItem, 'id' | 'user_id' | 'created_at'>) => {
+export const saveQueryToHistory = async (query: Omit<QueryHistoryInsert, 'id' | 'user_id' | 'created_at'>) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     console.warn("Usuário não autenticado. Não é possível salvar o histórico de consultas.");
@@ -35,7 +29,7 @@ export const saveQueryToHistory = async (query: Omit<QueryHistoryItem, 'id' | 'u
   return data;
 };
 
-export const getQueryHistory = async (): Promise<QueryHistoryItem[] | null> => {
+export const getQueryHistory = async (): Promise<QueryHistoryRow[] | null> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     console.warn("Usuário não autenticado. Não é possível obter o histórico de consultas.");
@@ -44,7 +38,7 @@ export const getQueryHistory = async (): Promise<QueryHistoryItem[] | null> => {
 
   const { data, error } = await supabase
     .from("query_history")
-    .select("id, location_name, latitude, longitude, query_date, created_at")
+    .select("id, location_name, latitude, longitude, query_date, created_at, user_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -52,7 +46,7 @@ export const getQueryHistory = async (): Promise<QueryHistoryItem[] | null> => {
     console.error("Erro ao obter histórico de consultas:", error);
     return null;
   }
-  return data as QueryHistoryItem[];
+  return data;
 };
 
 export const deleteQueryFromHistory = async (id: string) => {
