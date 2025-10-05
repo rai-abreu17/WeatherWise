@@ -267,7 +267,7 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <main className="container mx-auto px-4 pt-4 pb-6 md:py-20">
+      <main id="main-content" className="container mx-auto px-4 pt-4 pb-6 md:py-20">
         <div className="max-w-4xl mx-auto space-y-4 md:space-y-12">
           {/* Hero Text */}
           <div className="text-center space-y-3 md:space-y-6 animate-fade-in">

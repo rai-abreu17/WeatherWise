@@ -283,3 +283,153 @@ All colors MUST be HSL.
 .animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;
 }
+
+/* ============================================
+   ACESSIBILIDADE - WCAG 2.1 AA
+   ============================================ */
+
+/* Skip Link */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  z-index: 100;
+  border-radius: 0 0 0.375rem 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Screen Reader Only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.sr-only-focusable:focus,
+.sr-only-focusable:active {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Foco Visível */
+*:focus-visible {
+  outline: 3px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Foco Aprimorado */
+body.enhanced-focus *:focus-visible {
+  outline: 4px solid hsl(var(--primary));
+  outline-offset: 4px;
+  box-shadow: 0 0 0 4px hsla(var(--primary), 0.2);
+}
+
+/* Alto Contraste */
+body.high-contrast {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --primary: 217 91% 40%;
+  --secondary: 267 84% 47%;
+  --accent: 189 94% 33%;
+  --muted: 0 0% 95%;
+  --muted-foreground: 0 0% 20%;
+  --border: 0 0% 0%;
+}
+
+body.high-contrast .glass-effect,
+body.high-contrast .glass-effect-strong {
+  background: hsla(var(--background), 1) !important;
+  backdrop-filter: none !important;
+  border: 2px solid hsl(var(--border)) !important;
+}
+
+body.high-contrast button,
+body.high-contrast a {
+  text-decoration: underline;
+}
+
+/* Fonte para Dislexia */
+body.dyslexic-font {
+  font-family: 'OpenDyslexic', 'Comic Sans MS', 'Arial', sans-serif;
+}
+
+/* Redução de Movimento */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Tamanho de Fonte Ajustável */
+body {
+  font-size: var(--user-font-size, 16px);
+}
+
+/* Espaçamento entre Linhas */
+p, li, td, th {
+  line-height: 1.5;
+}
+
+/* Contraste Mínimo para Links */
+a {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Tabelas Acessíveis */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th {
+  text-align: left;
+  font-weight: 600;
+}
+
+/* Melhoria de Toque (Touch) */
+@media (pointer: coarse) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

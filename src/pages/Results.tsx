@@ -164,7 +164,7 @@ const Results = () => {
 
       {/* Results Content */}
       <div id="report-content">
-        <main className="container mx-auto px-4 py-12">
+        <main id="main-content" className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Title */}
           <h1 className="text-4xl md:text-5xl font-extrabold text-center mb-8 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
