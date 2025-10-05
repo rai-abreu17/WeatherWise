@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Cloud, Calendar, Sparkles, LogOut } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Cloud, Calendar, Sparkles, LogOut, X, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AboutDialog } from "@/components/AboutDialog";
@@ -17,11 +18,19 @@ import QueryHistoryList from "@/components/QueryHistoryList";
 import { saveQueryToHistory } from "@/services/queryHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
+interface SelectedLocation {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const [temperature, setTemperature] = useState([25]);
   const [userEmail, setUserEmail] = useState("");
-  const [location, setLocation] = useState("");
+  const [selectedLocations, setSelectedLocations] = useState<SelectedLocation[]>([]);
+  const [currentLocationInput, setCurrentLocationInput] = useState("");
+  const [pendingLocation, setPendingLocation] = useState<SelectedLocation | null>(null);
   const [date, setDate] = useState("");
   const [eventType, setEventType] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -29,55 +38,55 @@ const Index = () => {
   const [locationCoordinates, setLocationCoordinates] = useState<{ lat: number; lon: number } | null>(null);
   const [isGeocodingLocation, setIsGeocodingLocation] = useState(false);
 
-  // Geocode location when it changes
+  // Handle location selection from autocomplete
+  const handleLocationSelect = (locationName: string, latitude: number, longitude: number) => {
+    setPendingLocation({ name: locationName, latitude, longitude });
+    setCurrentLocationInput(locationName); // Atualizar o campo com o nome completo
+  };
+
+  // Add pending location to the list
+  const handleAddLocation = () => {
+    if (!pendingLocation) {
+      toast.error("Selecione uma localização primeiro");
+      return;
+    }
+
+    // Evitar duplicatas
+    if (selectedLocations.some(loc => loc.name === pendingLocation.name)) {
+      toast.info("Localização já adicionada");
+      return;
+    }
+
+    setSelectedLocations(prev => [...prev, pendingLocation]);
+    setCurrentLocationInput("");
+    setPendingLocation(null);
+    toast.success(`${pendingLocation.name} adicionada!`);
+  };
+
+  const handleRemoveLocation = (locationName: string) => {
+    setSelectedLocations(prev => prev.filter(loc => loc.name !== locationName));
+    toast.success("Localização removida");
+  };
+
+  // Update map coordinates based on selected locations
   useEffect(() => {
-    const geocodeLocation = async () => {
-      if (!location || location.length < 3) {
-        setLocationCoordinates(null);
-        return;
-      }
-
-      setIsGeocodingLocation(true);
-      
-      try {
-        // Clean up location string
-        const cleanLocation = location
-          .replace(/\s*,\s*BRA$/i, ', Brazil')
-          .replace(/\s*,\s*BR$/i, ', Brazil')
-          .trim();
-        
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanLocation)}&format=json&limit=1&accept-language=pt-BR,pt,en`;
-        
-        const response = await fetch(url, {
-          headers: {
-            'User-Agent': 'WeatherWise-Planner/1.0'
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          
-          if (data && data.length > 0) {
-            setLocationCoordinates({
-              lat: parseFloat(data[0].lat),
-              lon: parseFloat(data[0].lon)
-            });
-          } else {
-            setLocationCoordinates(null);
-          }
-        }
-      } catch (error) {
-        console.error('Geocoding error:', error);
-        setLocationCoordinates(null);
-      } finally {
-        setIsGeocodingLocation(false);
-      }
-    };
-
-    // Debounce geocoding
-    const timeoutId = setTimeout(geocodeLocation, 800);
-    return () => clearTimeout(timeoutId);
-  }, [location]);
+    if (selectedLocations.length > 0) {
+      // Show the first location on the map
+      const firstLocation = selectedLocations[0];
+      setLocationCoordinates({
+        lat: firstLocation.latitude,
+        lon: firstLocation.longitude
+      });
+    } else if (pendingLocation) {
+      // Show pending location on the map
+      setLocationCoordinates({
+        lat: pendingLocation.latitude,
+        lon: pendingLocation.longitude
+      });
+    } else {
+      setLocationCoordinates(null);
+    }
+  }, [selectedLocations, pendingLocation]);
 
   useEffect(() => {
     // Get current user
@@ -117,21 +126,57 @@ const Index = () => {
   };
 
   const handleAnalyze = async () => {
-    // Validate inputs using Zod
-    try {
-      const validatedData = climateAnalysisSchema.parse({
-        location: location,
-        date: date,
-        eventType: eventType,
-        preferredTemperature: temperature[0]
-      });
+    // Validate inputs
+    if (selectedLocations.length === 0) {
+      toast.error("Por favor, selecione pelo menos uma localização.");
+      return;
+    }
 
+    if (!date) {
+      toast.error("Por favor, selecione uma data.");
+      return;
+    }
+
+    if (!eventType) {
+      toast.error("Por favor, selecione um tipo de evento.");
+      return;
+    }
+
+    try {
       setIsAnalyzing(true);
       
-      console.log('Calling climate-analysis function with data:', validatedData);
+      // SOLUÇÃO TEMPORÁRIA: Se tiver apenas 1 localização, usar formato antigo
+      // para compatibilidade com Edge Function não atualizada
+      let requestData: any;
+      
+      if (selectedLocations.length === 1) {
+        // Formato antigo (compatível com Edge Function atual)
+        requestData = {
+          location: selectedLocations[0].name,
+          date: date,
+          eventType: eventType,
+          preferredTemperature: temperature[0]
+        };
+        console.log('Using legacy format (single location):', requestData);
+      } else {
+        // Formato novo (requer Edge Function atualizada)
+        requestData = {
+          locations: selectedLocations.map(loc => ({
+            name: loc.name,
+            latitude: loc.latitude,
+            longitude: loc.longitude
+          })),
+          date: date,
+          eventType: eventType,
+          preferredTemperature: temperature[0]
+        };
+        console.log('Using new format (multiple locations):', requestData);
+      }
+
+      console.log('Calling climate-analysis function with data:', requestData);
       
       const { data, error } = await supabase.functions.invoke('climate-analysis', {
-        body: validatedData
+        body: requestData
       });
 
       console.log('Response:', { data, error });
@@ -144,6 +189,10 @@ const Index = () => {
           context: error.context,
           full: error
         });
+        
+        // Mostrar erro mais detalhado ao usuário
+        const errorMessage = error.message || error.context?.error || 'Erro desconhecido';
+        toast.error(`Erro na análise: ${errorMessage}`);
         throw new Error(error.message || 'Erro ao chamar a função de análise');
       }
 
@@ -155,27 +204,24 @@ const Index = () => {
 
       // Salvar a consulta no histórico ANTES de navegar
       if (isLoggedIn) {
-        await saveQueryToHistory({
-          location_name: validatedData.location,
-          latitude: data.location.latitude,
-          longitude: data.location.longitude,
-          query_date: validatedData.date,
-        });
+        for (const loc of selectedLocations) {
+          await saveQueryToHistory({
+            location_name: loc.name,
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            query_date: date,
+          });
+        }
       }
       
       // Navigate to results page with the data
-      navigate("/results", { state: { analysisData: data } });
+      // Se usamos formato antigo (1 localização), converter para array para Results.tsx
+      const analysisData = Array.isArray(data) ? data : [data];
+      navigate("/results", { state: { analysisData } });
       
     } catch (error: any) {
       console.error('Error:', error);
-      
-      // Handle Zod validation errors
-      if (error.errors && Array.isArray(error.errors)) {
-        const firstError = error.errors[0];
-        toast.error(firstError.message);
-      } else {
-        toast.error("Erro ao analisar dados climáticos. Por favor, tente novamente.");
-      }
+      toast.error("Erro ao analisar dados climáticos. Por favor, tente novamente.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -247,20 +293,61 @@ const Index = () => {
             <div className="space-y-8">
               <div className="space-y-2">
                 <Label htmlFor="location" className="text-base font-semibold">
-                  Localização do Evento
+                  Localizações do Evento
                 </Label>
-                <LocationAutocomplete
-                  value={location}
-                  onChange={setLocation}
-                  disabled={isAnalyzing}
-                />
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <LocationAutocomplete
+                      value={currentLocationInput}
+                      onChange={setCurrentLocationInput}
+                      onSelect={handleLocationSelect}
+                      disabled={isAnalyzing}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleAddLocation}
+                    disabled={!pendingLocation || isAnalyzing}
+                    className="h-12 px-4 rounded-xl shadow-glow-primary"
+                    variant="hero"
+                    title="Adicionar localização"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </Button>
+                </div>
+                {/* Tags de localizações selecionadas */}
+                {selectedLocations.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2 animate-fade-in">
+                    {selectedLocations.map(loc => (
+                      <Badge key={loc.name} variant="secondary" className="flex items-center gap-1 px-3 py-1.5 text-sm">
+                        {loc.name}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 p-0 ml-1 hover:bg-transparent"
+                          onClick={() => handleRemoveLocation(loc.name)}
+                          disabled={isAnalyzing}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {/* Hint text */}
+                <p className="text-xs text-muted-foreground mt-2">
+                  {selectedLocations.length === 0 
+                    ? "Adicione pelo menos uma localização para comparar" 
+                    : `${selectedLocations.length} localização${selectedLocations.length > 1 ? 'ões' : ''} adicionada${selectedLocations.length > 1 ? 's' : ''}`
+                  }
+                </p>
               </div>
 
               {/* Interactive Map */}
-              {location && (
+              {selectedLocations.length > 0 && (
                 <div className="animate-fade-in">
                   <InteractiveMap 
-                    locationName={location} 
+                    locationName={selectedLocations[0].name} 
                     coordinates={locationCoordinates}
                   />
                 </div>

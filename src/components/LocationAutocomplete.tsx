@@ -14,6 +14,7 @@ interface LocationSuggestion {
 interface LocationAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
+  onSelect?: (locationName: string, latitude: number, longitude: number) => void;
   disabled?: boolean;
 }
 
@@ -39,7 +40,7 @@ const cleanLocationName = (displayName: string): string => {
   return cleaned;
 };
 
-export const LocationAutocomplete = ({ value, onChange, disabled }: LocationAutocompleteProps) => {
+export const LocationAutocomplete = ({ value, onChange, onSelect, disabled }: LocationAutocompleteProps) => {
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -107,7 +108,17 @@ export const LocationAutocomplete = ({ value, onChange, disabled }: LocationAuto
 
   const handleSelectSuggestion = (suggestion: LocationSuggestion) => {
     const cleanedName = cleanLocationName(suggestion.display_name);
-    onChange(cleanedName);
+    const latitude = parseFloat(suggestion.lat);
+    const longitude = parseFloat(suggestion.lon);
+    
+    // Se onSelect foi fornecido, use-o (para múltiplas localizações)
+    if (onSelect) {
+      onSelect(cleanedName, latitude, longitude);
+    } else {
+      // Fallback para comportamento antigo (single location)
+      onChange(cleanedName);
+    }
+    
     setSuggestions([]);
     setShowSuggestions(false);
   };
@@ -137,19 +148,40 @@ export const LocationAutocomplete = ({ value, onChange, disabled }: LocationAuto
 
           if (response.ok) {
             const data = await response.json();
-            // Use display_name which gives a full formatted address, but clean it
             const cleanedName = cleanLocationName(data.display_name);
-            onChange(cleanedName);
+            
+            // Se onSelect foi fornecido, use-o (para múltiplas localizações)
+            if (onSelect) {
+              onSelect(cleanedName, latitude, longitude);
+            } else {
+              // Fallback para comportamento antigo (single location)
+              onChange(cleanedName);
+            }
+            
             toast.success("Localização obtida com sucesso!");
           } else {
             // Fallback to coordinates if reverse geocoding fails
-            onChange(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+            const coordsString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            
+            if (onSelect) {
+              onSelect(coordsString, latitude, longitude);
+            } else {
+              onChange(coordsString);
+            }
+            
             toast.success("Localização obtida (coordenadas)");
           }
         } catch (error) {
           console.error('Reverse geocoding error:', error);
           // Fallback to coordinates
-          onChange(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+          const coordsString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+          
+          if (onSelect) {
+            onSelect(coordsString, latitude, longitude);
+          } else {
+            onChange(coordsString);
+          }
+          
           toast.success("Localização obtida (coordenadas)");
         }
         
