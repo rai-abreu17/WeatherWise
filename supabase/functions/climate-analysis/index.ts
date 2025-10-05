@@ -36,9 +36,18 @@ serve(async (req) => {
   try {
     const { location, locations, date, eventType, preferredTemperature }: ClimateRequest = await req.json();
     
+    console.log('Received request:', { 
+      hasLocation: !!location, 
+      hasLocations: !!locations, 
+      locationsCount: locations?.length,
+      date, 
+      eventType 
+    });
+    
     const NASA_API_KEY = Deno.env.get('NASA_API_KEY');
     if (!NASA_API_KEY) {
-      throw new Error('NASA_API_KEY not configured');
+      console.error('NASA_API_KEY is not configured in environment variables');
+      throw new Error('NASA_API_KEY not configured. Please add it to Supabase Edge Function secrets.');
     }
 
     // Determinar se é single ou múltiplas localizações
@@ -58,6 +67,7 @@ serve(async (req) => {
         longitude: coordinates.lon
       }];
     } else {
+      console.error('No location provided in request');
       throw new Error('Nenhuma localização fornecida. Use "location" ou "locations".');
     }
 

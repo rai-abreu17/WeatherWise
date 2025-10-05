@@ -28,6 +28,62 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Helper function to format location name for display
+const formatLocationName = (fullName: string): { short: string; full: string } => {
+  // Split by comma and trim
+  const parts = fullName.split(',').map(s => s.trim());
+  
+  if (parts.length === 0) {
+    return { short: fullName, full: fullName };
+  }
+  
+  // Strategy for Brazilian addresses:
+  // Typical format: "Street, Neighborhood, City, State, Postal Code, Country"
+  // We want to show: "City, State" or "City, Country" for international
+  
+  let shortName: string;
+  
+  if (parts.length <= 2) {
+    // Already short enough
+    shortName = fullName;
+  } else if (parts.length === 3) {
+    // "City, State, Country" -> "City, State"
+    shortName = `${parts[0]}, ${parts[1]}`;
+  } else if (parts.length >= 4) {
+    // For long addresses, try to identify city and state
+    // Brazilian pattern: [..., City, State, Postal Code, Country]
+    // or [..., City, State, Country]
+    
+    // Check if last part is "Brasil" (country)
+    const isBrazil = parts[parts.length - 1].toLowerCase().includes('brasil');
+    
+    if (isBrazil) {
+      // Check if second-to-last is postal code (contains numbers)
+      const hasPostalCode = /\d/.test(parts[parts.length - 2]);
+      
+      if (hasPostalCode && parts.length >= 4) {
+        // Format: [..., City, State, Postal, Brasil] -> "City, State"
+        shortName = `${parts[parts.length - 4]}, ${parts[parts.length - 3]}`;
+      } else if (parts.length >= 3) {
+        // Format: [..., City, State, Brasil] -> "City, State"
+        shortName = `${parts[parts.length - 3]}, ${parts[parts.length - 2]}`;
+      } else {
+        shortName = `${parts[0]}, ${parts[parts.length - 1]}`;
+      }
+    } else {
+      // International or unknown format: show first and last
+      shortName = `${parts[0]}, ${parts[parts.length - 1]}`;
+    }
+  } else {
+    shortName = fullName;
+  }
+  
+  return {
+    short: shortName,
+    full: fullName
+  };
+};
+
 interface DateData {
   date: string;
   displayDate: string;
@@ -180,47 +236,55 @@ const Results = () => {
                 role="tablist"
                 aria-label="Comparação de localizações"
               >
-                {allAnalysisData.map((analysis, index) => (
-                  <TabsTrigger 
-                    key={analysis.location.name} 
-                    value={analysis.location.name} 
-                    onClick={() => {
-                      setSelectedLocationIndex(index);
-                      setSelectedDateIndex(0); // Reset date selection ao mudar de localização
-                    }}
-                    className={`relative ${analysis.location.name === bestLocationName ? 'data-[state=active]:border-b-2 data-[state=active]:border-primary' : ''}`}
-                    role="tab"
-                    aria-label={`${analysis.location.name}${analysis.location.name === bestLocationName ? ' - Melhor opção' : ''}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {analysis.location.name}
-                      {analysis.location.name === bestLocationName && (
-                        <Trophy className="w-4 h-4 text-primary" aria-label="Troféu - Melhor localização" />
-                      )}
-                    </div>
-                  </TabsTrigger>
-                ))}
+                {allAnalysisData.map((analysis, index) => {
+                  const { short: shortName, full: fullName } = formatLocationName(analysis.location.name);
+                  return (
+                    <TabsTrigger 
+                      key={analysis.location.name} 
+                      value={analysis.location.name} 
+                      onClick={() => {
+                        setSelectedLocationIndex(index);
+                        setSelectedDateIndex(0); // Reset date selection ao mudar de localização
+                      }}
+                      className={`relative ${analysis.location.name === bestLocationName ? 'data-[state=active]:border-b-2 data-[state=active]:border-primary' : ''}`}
+                      role="tab"
+                      aria-label={`${fullName}${analysis.location.name === bestLocationName ? ' - Melhor opção' : ''}`}
+                      title={fullName}
+                    >
+                      <div className="flex items-center gap-2">
+                        {shortName}
+                        {analysis.location.name === bestLocationName && (
+                          <Trophy className="w-4 h-4 text-primary" aria-label="Troféu - Melhor localização" />
+                        )}
+                      </div>
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
               
-              {allAnalysisData.map((analysis, index) => (
-                <TabsContent key={analysis.location.name} value={analysis.location.name} role="tabpanel">
-                  {/* Event Info */}
-                  <div className="animate-fade-in glass-effect-strong p-6 rounded-2xl mb-8">
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-3 text-muted-foreground">
-                        <Calendar className="w-5 h-5" />
-                        <span className="text-base font-semibold">{analysis.location.name} • {currentData.displayDate}</span>
-                        {analysis.location.name === bestLocationName && (
-                          <span className="text-sm px-2 py-1 bg-primary/10 text-primary rounded-full font-semibold flex items-center gap-1">
-                            <Trophy className="w-3 h-3" />
-                            Melhor ICP
+              {allAnalysisData.map((analysis, index) => {
+                const { short: shortName, full: fullName } = formatLocationName(analysis.location.name);
+                return (
+                  <TabsContent key={analysis.location.name} value={analysis.location.name} role="tabpanel">
+                    {/* Event Info */}
+                    <div className="animate-fade-in glass-effect-strong p-6 rounded-2xl mb-8">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-3 text-muted-foreground">
+                          <Calendar className="w-5 h-5" />
+                          <span className="text-base font-semibold" title={fullName}>
+                            {shortName} • {currentData.displayDate}
                           </span>
-                        )}
+                          {analysis.location.name === bestLocationName && (
+                            <span className="text-sm px-2 py-1 bg-primary/10 text-primary rounded-full font-semibold flex items-center gap-1">
+                              <Trophy className="w-3 h-3" />
+                              Melhor ICP
+                            </span>
+                          )}
                       </div>
                       <NotificationButton locationName={analysis.location.name} />
                     </div>
-                    <h2 className="text-4xl font-extrabold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-                      Análise para {analysis.location.name}
+                    <h2 className="text-4xl font-extrabold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent" title={fullName}>
+                      Análise para {shortName}
                     </h2>
                   </div>
 
@@ -334,21 +398,27 @@ const Results = () => {
                     </Card>
                   </div>
                 </TabsContent>
-              ))}
+              );
+            })}
             </Tabs>
           ) : (
             // Renderização para localização única (compatibilidade)
-            <>
-              {/* Event Info */}
-              <div className="animate-fade-in glass-effect-strong p-6 rounded-2xl">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3 text-muted-foreground">
-                    <Calendar className="w-5 h-5" />
-                    <span className="text-base font-semibold">{currentAnalysis.location.name} • {currentData.displayDate}</span>
+            (() => {
+              const { short: shortName, full: fullName } = formatLocationName(currentAnalysis.location.name);
+              return (
+                <>
+                  {/* Event Info */}
+                  <div className="animate-fade-in glass-effect-strong p-6 rounded-2xl">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3 text-muted-foreground">
+                        <Calendar className="w-5 h-5" />
+                        <span className="text-base font-semibold" title={fullName}>
+                          {shortName} • {currentData.displayDate}
+                        </span>
+                      </div>
+                      <NotificationButton locationName={currentAnalysis.location.name} />
+                    </div>
                   </div>
-                  <NotificationButton locationName={currentAnalysis.location.name} />
-                </div>
-              </div>
 
               {/* Comfort Index */}
               <div className="animate-slide-up">
@@ -460,6 +530,8 @@ const Results = () => {
                 </Card>
               </div>
             </>
+              );
+            })()
           )}
 
           {/* Data Source */}

@@ -27,6 +27,7 @@ const cleanLocationName = (displayName: string): string => {
     /Região Metropolitana de [^,]+,?\s*/gi,
     /Microrregião de [^,]+,?\s*/gi,
     /Mesorregião de [^,]+,?\s*/gi,
+    /Região (Norte|Nordeste|Centro-Oeste|Sudeste|Sul),?\s*/gi, // Remove regiões do Brasil
   ];
   
   let cleaned = displayName;

@@ -182,22 +182,40 @@ const Index = () => {
       console.log('Response:', { data, error });
 
       if (error) {
-        console.error('Edge function error details:', {
-          message: error.message,
-          status: error.status,
-          statusText: error.statusText,
-          context: error.context,
-          full: error
-        });
+        console.error('Edge function error details:', error);
         
-        // Mostrar erro mais detalhado ao usuário
-        const errorMessage = error.message || error.context?.error || 'Erro desconhecido';
+        // Tentar obter mais detalhes do erro
+        let errorMessage = 'Erro desconhecido na análise climática';
+        
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (error.context?.error) {
+          errorMessage = error.context.error;
+        }
+        
+        // Se houver detalhes sobre a localização, incluir
+        if (data?.error) {
+          errorMessage = `${errorMessage}: ${data.error}`;
+        }
+        
         toast.error(`Erro na análise: ${errorMessage}`);
-        throw new Error(error.message || 'Erro ao chamar a função de análise');
+        console.error('Full error object:', JSON.stringify(error, null, 2));
+        throw new Error(errorMessage);
       }
 
       if (!data) {
+        toast.error('Nenhum dado retornado pela análise');
         throw new Error('Nenhum dado retornado pela função de análise');
+      }
+      
+      // Verificar se alguma localização retornou erro
+      if (Array.isArray(data)) {
+        const errorsFound = data.filter(item => item.error);
+        if (errorsFound.length > 0) {
+          console.error('Errors in locations:', errorsFound);
+          const errorLocs = errorsFound.map(e => e.location.name).join(', ');
+          toast.error(`Erro ao analisar: ${errorLocs}`);
+        }
       }
 
       console.log('Analysis result:', data);
