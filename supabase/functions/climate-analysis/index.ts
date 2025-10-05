@@ -6,8 +6,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface Location {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
 interface ClimateRequest {
-  location: string;
+  location?: string; // Compatibilidade com formato antigo
+  locations?: Location[]; // Novo formato para múltiplas localizações
   date: string;
   eventType: string;
   preferredTemperature: number;
@@ -27,51 +34,118 @@ serve(async (req) => {
   }
 
   try {
-    const { location, date, eventType, preferredTemperature }: ClimateRequest = await req.json();
-    console.log('Processing climate analysis for:', { location, date, eventType });
-
-    const NASA_API_KEY = Deno.env.get('NASA_API_KEY_NEW');
+    const { location, locations, date, eventType, preferredTemperature }: ClimateRequest = await req.json();
+    
+    const NASA_API_KEY = Deno.env.get('NASA_API_KEY');
     if (!NASA_API_KEY) {
       throw new Error('NASA_API_KEY not configured');
     }
 
-    // 1. Geocode the location
-    const coordinates = await geocodeLocation(location);
+    // Determinar se é single ou múltiplas localizações
+    let locationsToProcess: Location[] = [];
+    
+    if (locations && Array.isArray(locations) && locations.length > 0) {
+      // Novo formato: múltiplas localizações
+      console.log('Processing multiple locations:', locations.length);
+      locationsToProcess = locations;
+    } else if (location) {
+      // Formato antigo: localização única (compatibilidade)
+      console.log('Processing single location (legacy format):', location);
+      const coordinates = await geocodeLocation(location);
+      locationsToProcess = [{
+        name: location,
+        latitude: coordinates.lat,
+        longitude: coordinates.lon
+      }];
+    } else {
+      throw new Error('Nenhuma localização fornecida. Use "location" ou "locations".');
+    }
+
+    // Processar todas as localizações em paralelo
+    const analysisPromises = locationsToProcess.map(loc => 
+      processLocation(loc, date, eventType, preferredTemperature, NASA_API_KEY)
+    );
+    
+    const allResults = await Promise.all(analysisPromises);
+    
+    // Se foi formato antigo (single location), retornar objeto único
+    // Se foi formato novo (múltiplas), retornar array
+    const response = (location && !locations) ? allResults[0] : allResults;
+
+
+
+    return new Response(JSON.stringify(response), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Error in climate-analysis:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? error.stack : null
+      }), 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+});
+
+// Process a single location
+async function processLocation(
+  location: Location,
+  date: string,
+  eventType: string,
+  preferredTemperature: number,
+  apiKey: string
+) {
+  try {
+    console.log(`Processing location: ${location.name}`);
+    
+    // Use coordinates directly from the location object
+    const coordinates = {
+      lat: location.latitude,
+      lon: location.longitude
+    };
+    
     console.log('Coordinates:', coordinates);
 
-    // 2. Fetch historical climate data from NASA POWER API
+    // Fetch historical climate data from NASA POWER API
     const historicalData = await fetchHistoricalData(
       coordinates.lat,
       coordinates.lon,
       date,
-      NASA_API_KEY
+      apiKey
     );
-    console.log('Fetched historical data for 20+ years');
+    console.log(`Fetched historical data for ${location.name}`);
 
-    // 3. Calculate statistics and probabilities
+    // Calculate statistics and probabilities
     const statistics = calculateStatistics(historicalData);
     
-    // 4. Calculate Personal Comfort Index (ICP)
+    // Calculate Personal Comfort Index (ICP)
     const icp = calculateICP(statistics, preferredTemperature, eventType);
     
-    // 5. Detect climate trends
+    // Detect climate trends
     const trend = detectTrend(historicalData);
     
-    // 6. Suggest alternative dates
+    // Suggest alternative dates
     const alternativeDates = await suggestAlternativeDates(
       coordinates.lat,
       coordinates.lon,
       date,
       preferredTemperature,
       eventType,
-      NASA_API_KEY
+      apiKey
     );
 
-    // 7. Format response
-    const response = {
+    // Format response
+    return {
       location: {
-        name: location,
-        coordinates: coordinates
+        name: location.name,
+        latitude: coordinates.lat,
+        longitude: coordinates.lon
       },
       requestedDate: {
         date: date,
@@ -97,25 +171,22 @@ serve(async (req) => {
         yearsAnalyzed: historicalData.yearsCount
       }
     };
-
-    return new Response(JSON.stringify(response), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
   } catch (error) {
-    console.error('Error in climate-analysis:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        details: error instanceof Error ? error.stack : null
-      }), 
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    console.error(`Error processing location ${location.name}:`, error);
+    // Return error for this specific location instead of failing everything
+    return {
+      location: {
+        name: location.name,
+        latitude: location.latitude,
+        longitude: location.longitude
+      },
+      error: error instanceof Error ? error.message : 'Unknown error',
+      requestedDate: null,
+      alternativeDates: [],
+      dataSource: null
+    };
   }
-});
+}
 
 // Geocoding using OpenStreetMap Nominatim (free, no API key needed)
 // Also accepts direct coordinates in format "lat, lon"
