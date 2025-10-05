@@ -12,16 +12,21 @@ interface MetricCardProps {
 export const MetricCard = ({ icon: Icon, title, value, description, iconColor }: MetricCardProps) => {
   return (
     <Card className="glass-effect-strong p-7 hover-lift transition-all duration-300 animate-scale-in rounded-2xl border-2">
-      <div className="flex items-start gap-5">
-        <div className={`p-4 rounded-2xl ${iconColor} bg-opacity-15 shadow-lg`}>
+      <article className="flex items-start gap-5">
+        <div className={`p-4 rounded-2xl ${iconColor} bg-opacity-15 shadow-lg`} aria-hidden="true">
           <Icon className={`w-7 h-7 ${iconColor}`} />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">{title}</p>
-          <p className="text-4xl font-extrabold mb-3 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">{value}</p>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">{title}</h3>
+          <p 
+            className="text-4xl font-extrabold mb-3 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent"
+            aria-label={`${title}: ${value}`}
+          >
+            {value}
+          </p>
           <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
         </div>
-      </div>
+      </article>
     </Card>
   );
 };

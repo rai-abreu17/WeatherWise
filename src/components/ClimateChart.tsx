@@ -24,30 +24,57 @@ const ClimateChart: React.FC<ClimateChartProps> = ({ analysisData }) => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart
-            data={chartData}
-            margin={{
-              top: 5,
-              right: 30,
-              left: 20,
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.3} />
-            <XAxis dataKey="name" stroke="hsl(var(--foreground))" />
-            <YAxis yAxisId="left" orientation="left" stroke="hsl(var(--primary))" label={{ value: 'Temperatura (°C)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--primary))' }} />
-            <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--accent))" label={{ value: 'Chuva (%)', angle: 90, position: 'insideRight', fill: 'hsl(var(--accent))' }} />
-            <Tooltip 
-              contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
-              labelStyle={{ color: 'hsl(var(--foreground))' }}
-              itemStyle={{ color: 'hsl(var(--muted-foreground))' }}
-            />
-            <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="temperature" stroke="hsl(var(--primary))" activeDot={{ r: 8 }} name="Temperatura Média (°C)" />
-            <Line yAxisId="right" type="monotone" dataKey="rainProbability" stroke="hsl(var(--accent))" activeDot={{ r: 8 }} name="Probabilidade de Chuva (%)" />
-          </LineChart>
-        </ResponsiveContainer>
+        {/* Descrição textual para leitores de tela */}
+        <div className="sr-only" role="region" aria-label="Dados do gráfico climático">
+          <h3>Dados de Temperatura e Chuva</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Temperatura (°C)</th>
+                <th>Probabilidade de Chuva (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {chartData.map((item, index) => (
+                <tr key={index}>
+                  <td>{item.name}</td>
+                  <td>{item.temperature}°C</td>
+                  <td>{item.rainProbability}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Gráfico visual */}
+        <div role="img" aria-label="Gráfico de linhas comparando temperatura média e probabilidade de chuva entre datas">
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart
+              data={chartData}
+              margin={{
+                top: 5,
+                right: 30,
+                left: 20,
+                bottom: 5,
+              }}
+              aria-hidden="true"
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.3} />
+              <XAxis dataKey="name" stroke="hsl(var(--foreground))" />
+              <YAxis yAxisId="left" orientation="left" stroke="hsl(var(--primary))" label={{ value: 'Temperatura (°C)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--primary))' }} />
+              <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--accent))" label={{ value: 'Chuva (%)', angle: 90, position: 'insideRight', fill: 'hsl(var(--accent))' }} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                itemStyle={{ color: 'hsl(var(--muted-foreground))' }}
+              />
+              <Legend />
+              <Line yAxisId="left" type="monotone" dataKey="temperature" stroke="hsl(var(--primary))" activeDot={{ r: 8 }} name="Temperatura Média (°C)" />
+              <Line yAxisId="right" type="monotone" dataKey="rainProbability" stroke="hsl(var(--accent))" activeDot={{ r: 8 }} name="Probabilidade de Chuva (%)" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );

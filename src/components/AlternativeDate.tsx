@@ -29,29 +29,39 @@ export const AlternativeDate = ({ date, rainProbability, temperature, icp, isSel
         isSelected ? "ring-2 ring-primary shadow-glow" : ""
       }`}
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      aria-label={`Data alternativa ${date}. Probabilidade de chuva ${rainProbability}%, Temperatura ${temperature}°C, ICP ${icp} - ${getICPLabel(icp)}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+          <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors" aria-hidden="true">
             <Calendar className="w-5 h-5 text-primary" />
           </div>
           <div>
             <p className="font-semibold text-lg mb-2">{date}</p>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
-                <CloudRain className="w-4 h-4" />
-                <span>{rainProbability}%</span>
+                <CloudRain className="w-4 h-4" aria-hidden="true" />
+                <span aria-label={`Probabilidade de chuva ${rainProbability} por cento`}>{rainProbability}%</span>
               </div>
               <div className="flex items-center gap-1">
-                <Thermometer className="w-4 h-4" />
-                <span>{temperature}°C</span>
+                <Thermometer className="w-4 h-4" aria-hidden="true" />
+                <span aria-label={`Temperatura ${temperature} graus Celsius`}>{temperature}°C</span>
               </div>
             </div>
           </div>
         </div>
         <div className="text-right">
           <p className="text-xs text-muted-foreground mb-1">ICP</p>
-          <p className={`text-2xl font-bold ${getICPColor(icp)}`}>{icp}</p>
+          <p className={`text-2xl font-bold ${getICPColor(icp)}`} aria-label={`Índice de conforto pessoal ${icp}`}>{icp}</p>
           <p className={`text-xs font-medium ${getICPColor(icp)}`}>{getICPLabel(icp)}</p>
         </div>
       </div>

@@ -46,7 +46,9 @@ export const LocationAutocomplete = ({ value, onChange, onSelect, disabled }: Lo
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -121,6 +123,36 @@ export const LocationAutocomplete = ({ value, onChange, onSelect, disabled }: Lo
     
     setSuggestions([]);
     setShowSuggestions(false);
+    setActiveSuggestionIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveSuggestionIndex(prev => 
+          prev < suggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : suggestions.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (activeSuggestionIndex >= 0) {
+          handleSelectSuggestion(suggestions[activeSuggestionIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setActiveSuggestionIndex(-1);
+        break;
+    }
   };
 
   const handleGetCurrentLocation = () => {
@@ -203,23 +235,30 @@ export const LocationAutocomplete = ({ value, onChange, onSelect, disabled }: Lo
   return (
     <div ref={wrapperRef} className="relative">
       <div className="flex gap-2">
-        <div className="relative flex-1">
-          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
+        <div className="relative flex-1" role="combobox" aria-expanded={showSuggestions} aria-haspopup="listbox" aria-owns="location-suggestions">
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" aria-hidden="true" />
           <Input
+            ref={inputRef}
             id="location"
             placeholder="Digite uma cidade ou estado..."
             className="pl-10 h-12 text-base"
             value={value}
             onChange={(e) => handleInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
             onFocus={() => {
               if (suggestions.length > 0) {
                 setShowSuggestions(true);
               }
             }}
             disabled={disabled}
+            role="searchbox"
+            aria-autocomplete="list"
+            aria-controls="location-suggestions"
+            aria-activedescendant={activeSuggestionIndex >= 0 ? `suggestion-${activeSuggestionIndex}` : undefined}
+            aria-label="Digite o nome da cidade ou estado"
           />
           {isSearching && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground animate-spin" />
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground animate-spin" aria-label="Buscando localizações" />
           )}
         </div>
         <Button
@@ -229,30 +268,41 @@ export const LocationAutocomplete = ({ value, onChange, onSelect, disabled }: Lo
           className="h-12 px-4"
           onClick={handleGetCurrentLocation}
           disabled={isGettingLocation || disabled}
-          title="Usar minha localização atual"
+          aria-label="Usar minha localização atual"
         >
-          <Navigation className={`w-5 h-5 ${isGettingLocation ? 'animate-pulse' : ''}`} />
+          <Navigation className={`w-5 h-5 ${isGettingLocation ? 'animate-pulse' : ''}`} aria-hidden="true" />
+          <span className="sr-only">Obter localização atual</span>
         </Button>
       </div>
 
       {/* Suggestions Dropdown */}
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-2 bg-popover border border-border rounded-lg shadow-lg max-h-[300px] overflow-y-auto">
-          {suggestions.map((suggestion) => (
+        <div 
+          id="location-suggestions"
+          role="listbox"
+          className="absolute z-50 w-full mt-2 bg-popover border border-border rounded-lg shadow-lg max-h-[300px] overflow-y-auto"
+          aria-label="Sugestões de localização"
+        >
+          {suggestions.map((suggestion, index) => (
             <button
               key={suggestion.place_id}
+              id={`suggestion-${index}`}
               type="button"
-              className="w-full px-4 py-3 text-left hover:bg-accent transition-colors flex items-start gap-3 border-b border-border/50 last:border-b-0"
+              role="option"
+              aria-selected={index === activeSuggestionIndex}
+              className={`w-full px-4 py-3 text-left hover:bg-accent transition-colors flex items-start gap-3 border-b border-border/50 last:border-b-0 ${
+                index === activeSuggestionIndex ? 'bg-accent' : ''
+              }`}
               onClick={() => handleSelectSuggestion(suggestion)}
             >
-              <MapPin className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0" />
+              <MapPin className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0" aria-hidden="true" />
               <span className="text-sm text-foreground">{cleanLocationName(suggestion.display_name)}</span>
             </button>
           ))}
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground mt-2">
+      <p className="text-xs text-muted-foreground mt-2" id="location-hint">
         Digite pelo menos 3 caracteres para buscar ou use sua localização atual
       </p>
     </div>
