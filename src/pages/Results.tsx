@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,8 @@ import DirectPdfExport from "@/components/DirectPdfExport";
 import ClimateChart from "@/components/ClimateChart";
 import NotificationButton from "@/components/NotificationButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { MobileHeader } from "@/components/MobileHeader";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { 
   Cloud, 
   CloudRain, 
@@ -23,10 +25,22 @@ import {
   Calendar,
   LogOut,
   User,
-  Trophy
+  Trophy,
+  Download
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+// Helper function to get emoji based on ICP score
+const getScoreEmoji = (score: number): string => {
+  if (score >= 90) return '😊';
+  if (score >= 75) return '🙂';
+  if (score >= 60) return '😐';
+  if (score >= 40) return '😕';
+  return '😟';
+};
 
 // Helper function to format location name for display
 const formatLocationName = (fullName: string): { short: string; full: string } => {
@@ -86,6 +100,7 @@ const Results = () => {
   const [selectedLocationIndex, setSelectedLocationIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
   const [bestLocationName, setBestLocationName] = useState<string | null>(null);
   
   // Modo evento: quando vem de um EventCard
@@ -97,6 +112,9 @@ const Results = () => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setIsLoggedIn(!!user);
+      if (user) {
+        setUserEmail(user.email || "");
+      }
     };
     checkAuth();
     
@@ -172,27 +190,131 @@ const Results = () => {
     }
   };
 
+  // Função para exportar PDF que pode ser chamada pelo MobileHeader
+  const handleExportPdf = async () => {
+    toast.info('Gerando PDF...');
+    
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        putOnlyUsedFonts: true,
+        compress: true
+      });
+
+      // Título principal
+      doc.setFontSize(18);
+      doc.setTextColor(29, 78, 216);
+      doc.text('WeatherWise - Relatório Climático', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 105, 28, { align: 'center' });
+
+      let currentY = 40;
+
+      // Processar cada localização
+      for (let i = 0; i < allAnalysisData.length; i++) {
+        const data = allAnalysisData[i];
+        
+        if (i > 0) {
+          doc.addPage();
+          currentY = 20;
+        }
+
+        // Informações da localização
+        doc.setFontSize(14);
+        doc.setTextColor(29, 78, 216);
+        doc.text(data.location.name, 20, currentY, { maxWidth: 170 });
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        currentY += 10;
+        doc.text(`Coordenadas: ${data.location.latitude.toFixed(4)}, ${data.location.longitude.toFixed(4)}`, 20, currentY);
+        currentY += 7;
+        doc.text(`Data Solicitada: ${data.requestedDate.displayDate}`, 20, currentY);
+        currentY += 15;
+
+        // Dados da data solicitada
+        const requestedDateData = [
+          ['Temperatura', `${data.requestedDate.temperature}°C`],
+          ['Probabilidade de Chuva', `${data.requestedDate.rainProbability}%`],
+          ['Umidade', `${data.requestedDate.humidity}%`],
+          ['Vento', `${data.requestedDate.windSpeed} km/h`],
+          ['ICP', `${data.requestedDate.icp}/100`],
+        ];
+        
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Métrica', 'Valor']],
+          body: requestedDateData,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [59, 130, 246],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+          },
+          margin: { left: 20, right: 20 },
+        });
+
+        currentY = (doc as any).lastAutoTable.finalY + 15;
+
+        // Datas alternativas
+        doc.setFontSize(12);
+        doc.setTextColor(29, 78, 216);
+        doc.text('Datas Alternativas', 20, currentY);
+        currentY += 5;
+
+        const alternativeDatesData = data.alternativeDates.slice(0, 5).map((date: any) => [
+          date.displayDate,
+          `${date.temperature}°C`,
+          `${date.rainProbability}%`,
+          `${date.icp}/100`,
+        ]);
+        
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Data', 'Temp.', 'Chuva', 'ICP']],
+          body: alternativeDatesData,
+          theme: 'striped',
+          headStyles: {
+            fillColor: [59, 130, 246],
+            textColor: [255, 255, 255],
+          },
+          margin: { left: 20, right: 20 },
+        });
+      }
+
+      // Salvar PDF
+      const fileName = `relatorio-${currentAnalysis.location.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf`;
+      doc.save(fileName);
+      toast.success('PDF gerado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast.error('Erro ao gerar PDF. Tente novamente.');
+    }
+  };
+
   return (
     <div className="min-h-screen gradient-hero">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-lg bg-background/80 sticky top-0 z-50 shadow-lg" role="banner">
+      {/* Mobile Header */}
+      <MobileHeader 
+        userEmail={userEmail} 
+        isLoggedIn={isLoggedIn}
+        onExportPdf={handleExportPdf}
+      />
+
+      {/* Desktop Header - Hidden on mobile */}
+      <header className="hidden lg:block border-b border-border/50 backdrop-blur-lg bg-background/80 sticky top-14 z-40 shadow-lg" role="banner">
         <div className="container mx-auto px-4 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="rounded-xl hover-lift" aria-label="Voltar para página inicial">
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />
               Voltar
             </Button>
-            <div className="flex items-center gap-3" role="img" aria-label="Logo WeatherWise">
-              <div className="p-3 gradient-primary rounded-2xl shadow-glow-primary">
-                <Cloud className="w-6 h-6 text-white" aria-hidden="true" />
-              </div>
-              <span className="text-xl font-extrabold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                WeatherWise
-              </span>
-            </div>
           </div>
           <nav className="flex items-center gap-3" aria-label="Ações e navegação">
-            <AboutDialog />
             <DirectPdfExport 
               analysisData={allAnalysisData}
               fileName={`relatorio-${currentAnalysis.location.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf`}
@@ -201,23 +323,12 @@ const Results = () => {
             <Button variant="hero" size="sm" onClick={() => navigate("/")} className="rounded-xl shadow-glow-primary" aria-label="Iniciar nova consulta">
               Nova Consulta
             </Button>
-            <ThemeToggle />
-            {isLoggedIn ? (
-              <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl" aria-label="Sair da conta">
-                <LogOut className="w-4 h-4" aria-hidden="true" />
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="rounded-xl" aria-label="Entrar na sua conta">
-                <User className="w-4 h-4" aria-hidden="true" />
-                Entrar
-              </Button>
-            )}
           </nav>
         </div>
       </header>
 
-      {/* Results Content */}
-      <main id="main-content" className="container mx-auto px-4 py-12">
+      {/* Results Content - Aumentado padding mobile */}
+      <main id="main-content" className="container mx-auto px-6 md:px-8 py-8 md:py-12">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Title */}
           <h1 className="text-4xl md:text-5xl font-extrabold text-center mb-8 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">

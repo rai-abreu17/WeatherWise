@@ -19,6 +19,7 @@ import { saveQueryToHistory } from "@/services/queryHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EventsList } from "@/components/EventsList";
 import { UserLocation } from "@/types/events";
+import { MobileHeader } from "@/components/MobileHeader";
 
 interface SelectedLocation {
   name: string;
@@ -372,54 +373,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen gradient-hero">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-lg bg-background/80 sticky top-0 z-50 shadow-lg" role="banner">
-        <div className="container mx-auto px-4 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3" role="img" aria-label="Logo WeatherWise">
-            <div className="p-3 gradient-primary rounded-2xl shadow-glow-primary">
-              <Cloud className="w-7 h-7 text-white" aria-hidden="true" />
-            </div>
-            <span className="text-2xl font-extrabold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              WeatherWise
-            </span>
-          </div>
-          <nav className="flex items-center gap-3" aria-label="Navegação principal">
-            {isLoggedIn ? (
-              <>
-                <span className="text-sm font-medium text-muted-foreground hidden md:block glass-effect px-4 py-2 rounded-xl">
-                  {userEmail}
-                </span>
-                <AboutDialog />
-                <ThemeToggle />
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleLogout} 
-                  className="rounded-xl"
-                  aria-label="Sair da conta"
-                >
-                  <LogOut className="w-4 h-4" aria-hidden="true" />
-                  Sair
-                </Button>
-              </>
-            ) : (
-              <>
-                <AboutDialog />
-                <ThemeToggle />
-                <Button 
-                  variant="hero" 
-                  size="sm" 
-                  onClick={() => navigate("/auth")} 
-                  className="rounded-xl shadow-glow-primary"
-                  aria-label="Entrar na sua conta"
-                >
-                  Entrar
-                </Button>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
+      {/* Mobile Header */}
+      <MobileHeader userEmail={userEmail} isLoggedIn={isLoggedIn} />
 
       {/* Hero Section */}
       <main id="main-content" className="container mx-auto px-4 pt-4 pb-6 md:py-20">
