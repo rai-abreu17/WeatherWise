@@ -9,6 +9,7 @@ import { AlternativeDate } from "@/components/AlternativeDate";
 import { AboutDialog } from "@/components/AboutDialog";
 import DirectPdfExport from "@/components/DirectPdfExport";
 import ClimateChart from "@/components/ClimateChart";
+import HourlyForecastChart from "@/components/HourlyForecastChart";
 import NotificationButton from "@/components/NotificationButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { MobileHeader } from "@/components/MobileHeader";
@@ -314,16 +315,7 @@ const Results = () => {
               Voltar
             </Button>
           </div>
-          <nav className="flex items-center gap-3" aria-label="Ações e navegação">
-            <DirectPdfExport 
-              analysisData={allAnalysisData}
-              fileName={`relatorio-${currentAnalysis.location.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf`}
-              buttonText="Exportar PDF"
-            />
-            <Button variant="hero" size="sm" onClick={() => navigate("/")} className="rounded-xl shadow-glow-primary" aria-label="Iniciar nova consulta">
-              Nova Consulta
-            </Button>
-          </nav>
+          {/* Botões removidos - já existem no MobileHeader para desktop */}
         </div>
       </header>
 
@@ -405,6 +397,20 @@ const Results = () => {
                   <div className="animate-slide-up mb-8">
                     <ClimateChart analysisData={analysis} />
                   </div>
+
+                  {/* Hourly Forecast Chart */}
+                  {analysis.hourlyAnalysis && (
+                    <div className="animate-slide-up mb-8">
+                      <HourlyForecastChart
+                        hourlyAnalysis={analysis.hourlyAnalysis}
+                        recommendedTimeSlots={analysis.recommendedTimeSlots || []}
+                        selectedDate={currentData.date}
+                        onTimeSlotSelect={(startHour, endHour) => {
+                          toast.success(`Horário alternativo selecionado: ${startHour}:00 - ${endHour}:00`);
+                        }}
+                      />
+                    </div>
+                  )}
 
                   {/* Metrics Grid */}
                   <div className="space-y-6 mb-8">
@@ -540,6 +546,20 @@ const Results = () => {
               <div className="animate-slide-up">
                 <ClimateChart analysisData={currentAnalysis} />
               </div>
+
+              {/* Hourly Forecast Chart */}
+              {currentAnalysis.hourlyAnalysis && (
+                <div className="animate-slide-up">
+                  <HourlyForecastChart
+                    hourlyAnalysis={currentAnalysis.hourlyAnalysis}
+                    recommendedTimeSlots={currentAnalysis.recommendedTimeSlots || []}
+                    selectedDate={currentData.date}
+                    onTimeSlotSelect={(startHour, endHour) => {
+                      toast.success(`Horário alternativo selecionado: ${startHour}:00 - ${endHour}:00`);
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Metrics Grid */}
               <div className="space-y-6">

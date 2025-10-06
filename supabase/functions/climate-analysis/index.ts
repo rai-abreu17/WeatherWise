@@ -4,6 +4,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Cache-Control': 'public, max-age=300', // Cache 5 minutos
 };
 
 interface Location {
@@ -12,12 +13,19 @@ interface Location {
   longitude: number;
 }
 
+interface EventTimeData {
+  startTime: string | null;
+  endTime: string | null;
+  isAllDay: boolean;
+}
+
 interface ClimateRequest {
   location?: string; // Compatibilidade com formato antigo
   locations?: Location[]; // Novo formato para múltiplas localizações
   date: string;
   eventType: string;
   preferredTemperature: number;
+  eventTime?: EventTimeData; // Dados de horário do evento
 }
 
 interface ClimateData {
@@ -34,14 +42,15 @@ serve(async (req) => {
   }
 
   try {
-    const { location, locations, date, eventType, preferredTemperature }: ClimateRequest = await req.json();
+    const { location, locations, date, eventType, preferredTemperature, eventTime }: ClimateRequest = await req.json();
     
     console.log('Received request:', { 
       hasLocation: !!location, 
       hasLocations: !!locations, 
       locationsCount: locations?.length,
       date, 
-      eventType 
+      eventType,
+      hasEventTime: !!eventTime
     });
     
     const NASA_API_KEY = Deno.env.get('NASA_API_KEY');
@@ -73,7 +82,7 @@ serve(async (req) => {
 
     // Processar todas as localizações em paralelo
     const analysisPromises = locationsToProcess.map(loc => 
-      processLocation(loc, date, eventType, preferredTemperature, NASA_API_KEY)
+      processLocation(loc, date, eventType, preferredTemperature, NASA_API_KEY, eventTime)
     );
     
     const allResults = await Promise.all(analysisPromises);
@@ -312,10 +321,13 @@ async function processLocation(
   date: string,
   eventType: string,
   preferredTemperature: number,
-  apiKey: string
+  apiKey: string,
+  eventTime?: EventTimeData
 ) {
   try {
-    console.log(`Processing location: ${location.name}`);
+    console.log(`⚡ Processing location: ${location.name}`);
+    const processingStartTime = performance.now();
+    const performanceMetrics: any = {};
     
     // Use coordinates directly from the location object
     const coordinates = {
@@ -326,38 +338,89 @@ async function processLocation(
     console.log('Coordinates:', coordinates);
 
     // Fetch historical climate data from NASA POWER API
+    const t1 = performance.now();
     const historicalData = await fetchHistoricalData(
       coordinates.lat,
       coordinates.lon,
       date,
       apiKey
     );
-    console.log(`Fetched historical data for ${location.name}`);
+    performanceMetrics.fetchHistoricalData = (performance.now() - t1).toFixed(0);
+    console.log(`✅ Fetched historical data in ${performanceMetrics.fetchHistoricalData}ms`);
 
     // Calculate statistics and probabilities
+    const t2 = performance.now();
     const statistics = calculateStatistics(historicalData);
+    performanceMetrics.calculateStatistics = (performance.now() - t2).toFixed(0);
     
     // Calculate Personal Comfort Index (ICP)
     const icp = calculateICP(statistics, preferredTemperature, eventType);
     
     // Detect climate trends
     const trend = detectTrend(historicalData);
+    performanceMetrics.calculations = (performance.now() - t2).toFixed(0);
+    console.log(`✅ Calculations completed in ${performanceMetrics.calculations}ms`);
     
-    // Buscar feriados dos próximos 6 meses - Nager.Date API
-    const nearbyHolidays = await findNearbyHolidays(date, 'BR');
+    // 🚀 OTIMIZAÇÃO: Buscar feriados, datas alternativas e análise horária em PARALELO
+    const t3 = performance.now();
+    console.log('⚡ Starting parallel requests (holidays + alternatives + hourly)...');
+    
+    const parallelPromises: any = {
+      holidays: findNearbyHolidays(date, 'BR'),
+      alternativeDates: suggestAlternativeDates(
+        coordinates.lat,
+        coordinates.lon,
+        date,
+        preferredTemperature,
+        eventType,
+        apiKey
+      )
+    };
+    
+    // Adicionar análise horária se fornecido
+    if (eventTime && !eventTime.isAllDay && eventTime.startTime) {
+      parallelPromises.hourlyAnalysis = (async () => {
+        try {
+          const hourlyForecast = await generateHourlyForecast(
+            coordinates.lat,
+            coordinates.lon,
+            date,
+            statistics
+          );
+          
+          const startHour = parseInt(eventTime.startTime.split(':')[0]);
+          const endHour = eventTime.endTime 
+            ? parseInt(eventTime.endTime.split(':')[0]) 
+            : startHour + 2;
+          
+          const analysis = analyzeTimeSlot(hourlyForecast, startHour, endHour);
+          const recommended = findOptimalTimeSlots(hourlyForecast, startHour, endHour);
+          
+          return { analysis, recommended };
+        } catch (error) {
+          console.error('Error in hourly analysis:', error);
+          return { analysis: null, recommended: [] };
+        }
+      })();
+    }
+    
+    // Aguardar todas as requisições paralelas
+    const parallelResults = await Promise.all([
+      parallelPromises.holidays,
+      parallelPromises.alternativeDates,
+      parallelPromises.hourlyAnalysis || Promise.resolve({ analysis: null, recommended: [] })
+    ]);
+    
+    const [nearbyHolidays, alternativeDates, hourlyResult] = parallelResults;
     const holidayMessages = generateHolidayMessages(nearbyHolidays, statistics);
     
-    console.log(`Found ${nearbyHolidays.length} holidays in the next 6 months from ${date}`);
+    performanceMetrics.parallelRequests = (performance.now() - t3).toFixed(0);
+    console.log(`✅ Parallel requests completed in ${performanceMetrics.parallelRequests}ms`);
     
-    // Suggest alternative dates
-    const alternativeDates = await suggestAlternativeDates(
-      coordinates.lat,
-      coordinates.lon,
-      date,
-      preferredTemperature,
-      eventType,
-      apiKey
-    );
+    const totalTime = (performance.now() - processingStartTime).toFixed(0);
+    performanceMetrics.total = totalTime;
+    console.log(`🎯 Total processing time: ${totalTime}ms`);
+    console.log(`Found ${nearbyHolidays.length} holidays in the next 6 months from ${date}`);
 
     // Format response
     return {
@@ -383,6 +446,8 @@ async function processLocation(
         extremeDescription: getExtremeDescription(statistics.extremeEventsProbability),
         alertMessage: trend.isSignificant ? trend.message : null
       },
+      hourlyAnalysis: hourlyResult.analysis,
+      recommendedTimeSlots: hourlyResult.recommended,
       holidays: {
         count: nearbyHolidays.length,
         nearby: nearbyHolidays,
@@ -393,7 +458,8 @@ async function processLocation(
         provider: 'NASA POWER',
         period: `${historicalData.startYear}-${historicalData.endYear}`,
         yearsAnalyzed: historicalData.yearsCount
-      }
+      },
+      _performance: performanceMetrics // Métricas de performance para debug
     };
   } catch (error) {
     console.error(`Error processing location ${location.name}:`, error);
@@ -646,13 +712,15 @@ async function suggestAlternativeDates(
   apiKey: string
 ) {
   const date = new Date(targetDate);
-  const alternatives = [];
+  const offsets = [-7, -14, 7, 14];
   
-  // Check 7 days before and after
-  for (let offset of [-7, -14, 7, 14]) {
+  // 🚀 OTIMIZAÇÃO: Buscar TODAS as datas alternativas em PARALELO
+  console.log('⚡ Fetching alternative dates in parallel...');
+  const startTime = performance.now();
+  
+  const promises = offsets.map(async (offset) => {
     const altDate = new Date(date);
     altDate.setDate(altDate.getDate() + offset);
-    
     const altDateStr = altDate.toISOString().split('T')[0];
     
     try {
@@ -660,7 +728,7 @@ async function suggestAlternativeDates(
       const statistics = calculateStatistics(historicalData);
       const icp = calculateICP(statistics, preferredTemperature, eventType);
       
-      alternatives.push({
+      return {
         date: altDateStr,
         displayDate: formatDate(altDateStr),
         icp: icp,
@@ -675,11 +743,19 @@ async function suggestAlternativeDates(
         cloudDescription: getCloudDescription(statistics.avgCloudCover),
         extremeEvents: statistics.extremeEventsProbability,
         extremeDescription: getExtremeDescription(statistics.extremeEventsProbability)
-      });
+      };
     } catch (error) {
       console.error(`Failed to fetch data for alternative date ${altDateStr}:`, error);
+      return null;
     }
-  }
+  });
+  
+  // Aguardar todas as requisições em paralelo
+  const results = await Promise.all(promises);
+  const alternatives = results.filter(r => r !== null);
+  
+  const endTime = performance.now();
+  console.log(`✅ Alternative dates fetched in ${(endTime - startTime).toFixed(0)}ms (parallel)`);
   
   // Sort by ICP score (highest first)
   return alternatives.sort((a, b) => b.icp - a.icp);
@@ -735,3 +811,203 @@ function getExtremeDescription(probability: number): string {
   if (probability < 30) return 'Probabilidade moderada de extremos';
   return 'Alta probabilidade de eventos extremos';
 }
+
+// ============= HOURLY ANALYSIS FUNCTIONS =============
+
+/**
+ * Gera dados de previsão horária simulados baseados em dados históricos
+ * Nota: Em produção, deve-se usar uma API de previsão real como OpenWeatherMap ou WeatherAPI
+ */
+async function generateHourlyForecast(
+  latitude: number,
+  longitude: number,
+  date: string,
+  historicalStats: any
+): Promise<any[]> {
+  const hourlyData = [];
+  const targetDate = new Date(date);
+  
+  // Gerar dados hora a hora (6h às 22h)
+  for (let hour = 6; hour <= 22; hour++) {
+    const hourDate = new Date(targetDate);
+    hourDate.setHours(hour, 0, 0, 0);
+    
+    // Simular variação de temperatura ao longo do dia
+    const tempVariation = Math.sin((hour - 6) * Math.PI / 16) * 5;
+    const temp_c = historicalStats.avgTemperature + tempVariation + (Math.random() - 0.5) * 2;
+    
+    // Simular chance de chuva (maior à tarde)
+    const rainBaseChance = historicalStats.rainProbability;
+    const rainVariation = hour >= 14 && hour <= 18 ? 10 : 0;
+    const chance_of_rain = Math.min(100, Math.max(0, rainBaseChance + rainVariation + (Math.random() - 0.5) * 15));
+    
+    // Simular outros parâmetros
+    const humidity = historicalStats.avgHumidity + (Math.random() - 0.5) * 10;
+    const wind_kph = historicalStats.avgWindSpeed + (Math.random() - 0.5) * 5;
+    
+    hourlyData.push({
+      time: hourDate.toISOString(),
+      temp_c: Math.round(temp_c * 10) / 10,
+      condition: chance_of_rain > 60 ? 'Possibilidade de chuva' : chance_of_rain > 30 ? 'Parcialmente nublado' : 'Claro',
+      precip_mm: chance_of_rain > 60 ? (Math.random() * 5) : 0,
+      chance_of_rain: Math.round(chance_of_rain),
+      humidity: Math.round(humidity),
+      wind_kph: Math.round(wind_kph * 10) / 10,
+      uv: hour >= 10 && hour <= 16 ? Math.min(11, 3 + (Math.random() * 5)) : 0,
+      is_day: hour >= 6 && hour <= 18 ? 1 : 0
+    });
+  }
+  
+  return hourlyData;
+}
+
+/**
+ * Analisa um intervalo de tempo específico
+ */
+function analyzeTimeSlot(hourlyForecast: any[], startHour: number, endHour: number) {
+  const relevantHours = hourlyForecast.filter(hour => {
+    const hourNum = new Date(hour.time).getHours();
+    return hourNum >= startHour && hourNum <= endHour;
+  });
+  
+  if (relevantHours.length === 0) {
+    return null;
+  }
+  
+  // Calcular médias e valores máximos
+  const avgTemp = relevantHours.reduce((sum, hour) => sum + hour.temp_c, 0) / relevantHours.length;
+  const maxPrecipChance = Math.max(...relevantHours.map(hour => hour.chance_of_rain));
+  const avgHumidity = relevantHours.reduce((sum, hour) => sum + hour.humidity, 0) / relevantHours.length;
+  const avgWindSpeed = relevantHours.reduce((sum, hour) => sum + hour.wind_kph, 0) / relevantHours.length;
+  
+  // Calcular índice de conforto
+  const comfortIndex = calculateComfortIndex({
+    temperature: avgTemp,
+    precipitation: maxPrecipChance,
+    humidity: avgHumidity,
+    windSpeed: avgWindSpeed
+  });
+  
+  // Gerar mensagem de alerta se necessário
+  let alertMessage = null;
+  if (maxPrecipChance > 50) {
+    alertMessage = `Alta probabilidade de chuva (${Math.round(maxPrecipChance)}%) durante o horário selecionado.`;
+  } else if (avgTemp > 30) {
+    alertMessage = `Temperatura média elevada (${avgTemp.toFixed(1)}°C) durante o horário selecionado.`;
+  } else if (avgTemp < 15) {
+    alertMessage = `Temperatura média baixa (${avgTemp.toFixed(1)}°C) durante o horário selecionado.`;
+  }
+  
+  return {
+    timeSlot: `${startHour}:00 - ${endHour}:00`,
+    averageTemperature: Math.round(avgTemp * 10) / 10,
+    maxPrecipitationChance: Math.round(maxPrecipChance),
+    averageHumidity: Math.round(avgHumidity),
+    averageWindSpeed: Math.round(avgWindSpeed * 10) / 10,
+    comfortIndex,
+    alertMessage,
+    hourlyData: relevantHours
+  };
+}
+
+/**
+ * Encontra os melhores horários alternativos
+ */
+function findOptimalTimeSlots(
+  hourlyForecast: any[],
+  originalStartHour: number,
+  originalEndHour: number
+): any[] {
+  const duration = originalEndHour - originalStartHour;
+  const slots = [];
+  
+  // Verificar todos os possíveis intervalos (6h às 20h)
+  for (let startHour = 6; startHour <= 20 - duration; startHour++) {
+    const endHour = startHour + duration;
+    
+    // Não incluir o horário original
+    if (startHour === originalStartHour) continue;
+    
+    const analysis = analyzeTimeSlot(hourlyForecast, startHour, endHour);
+    
+    if (analysis) {
+      slots.push({
+        startHour,
+        endHour,
+        timeSlot: `${startHour}:00 - ${endHour}:00`,
+        comfortIndex: analysis.comfortIndex
+      });
+    }
+  }
+  
+  // Ordenar por índice de conforto (decrescente) e retornar os 3 melhores
+  return slots
+    .sort((a, b) => b.comfortIndex - a.comfortIndex)
+    .slice(0, 3);
+}
+
+/**
+ * Calcula o índice de conforto para um conjunto de condições
+ */
+function calculateComfortIndex(params: {
+  temperature: number;
+  precipitation: number;
+  humidity: number;
+  windSpeed: number;
+}): number {
+  const { temperature, precipitation, humidity, windSpeed } = params;
+  
+  // Pesos para cada fator
+  const weights = {
+    temperature: 0.4,
+    precipitation: 0.3,
+    humidity: 0.2,
+    windSpeed: 0.1
+  };
+  
+  // Normalizar cada fator para uma escala de 0-100
+  const normalizedTemp = normalizeTemperature(temperature);
+  const normalizedPrecip = normalizePrecipitation(precipitation);
+  const normalizedHumidity = normalizeHumidity(humidity);
+  const normalizedWind = normalizeWindSpeed(windSpeed);
+  
+  // Calcular o índice ponderado
+  const index = 
+    weights.temperature * normalizedTemp +
+    weights.precipitation * normalizedPrecip +
+    weights.humidity * normalizedHumidity +
+    weights.windSpeed * normalizedWind;
+  
+  return Math.round(index);
+}
+
+/**
+ * Funções de normalização para o índice de conforto
+ */
+function normalizeTemperature(temp: number): number {
+  // Temperatura ideal: 22-25°C
+  if (temp >= 22 && temp <= 25) return 100;
+  if (temp < 22) return Math.max(0, 100 - (22 - temp) * 5);
+  return Math.max(0, 100 - (temp - 25) * 5);
+}
+
+function normalizePrecipitation(chance: number): number {
+  // Quanto menor a chance de chuva, melhor
+  return Math.max(0, 100 - chance);
+}
+
+function normalizeHumidity(humidity: number): number {
+  // Umidade ideal: 40-60%
+  if (humidity >= 40 && humidity <= 60) return 100;
+  if (humidity < 40) return Math.max(0, 100 - (40 - humidity) * 2);
+  return Math.max(0, 100 - (humidity - 60) * 2);
+}
+
+function normalizeWindSpeed(speed: number): number {
+  // Velocidade do vento ideal: 0-15 km/h
+  if (speed <= 15) return 100;
+  if (speed <= 30) return Math.max(0, 100 - (speed - 15) * 3);
+  return 10; // Vento muito forte
+}
+
+// ============= END HOURLY ANALYSIS FUNCTIONS =============

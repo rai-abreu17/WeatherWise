@@ -20,6 +20,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { EventsList } from "@/components/EventsList";
 import { UserLocation } from "@/types/events";
 import { MobileHeader } from "@/components/MobileHeader";
+import EventTimeSelector from "@/components/EventTimeSelector";
 
 interface SelectedLocation {
   name: string;
@@ -51,6 +52,11 @@ const Index = () => {
   const [eventName, setEventName] = useState("");
   const [eventStartDate, setEventStartDate] = useState("");
   const [eventEndDate, setEventEndDate] = useState("");
+  const [eventTime, setEventTime] = useState({
+    startTime: '14:00',
+    endTime: null as string | null,
+    isAllDay: false
+  });
 
   // Inicializar com dados do evento se vier do EventCard
   useEffect(() => {
@@ -281,7 +287,8 @@ const Index = () => {
           location: selectedLocations[0].name,
           date: analysisDate,
           eventType: eventType,
-          preferredTemperature: temperature[0]
+          preferredTemperature: temperature[0],
+          eventTime: !eventTime.isAllDay ? eventTime : undefined
         };
         console.log('Using legacy format (single location):', requestData);
       } else {
@@ -294,7 +301,8 @@ const Index = () => {
           })),
           date: analysisDate,
           eventType: eventType,
-          preferredTemperature: temperature[0]
+          preferredTemperature: temperature[0],
+          eventTime: !eventTime.isAllDay ? eventTime : undefined
         };
         console.log('Using new format (multiple locations):', requestData);
       }
@@ -361,7 +369,12 @@ const Index = () => {
       // Navigate to results page with the data
       // Se usamos formato antigo (1 localização), converter para array para Results.tsx
       const analysisData = Array.isArray(data) ? data : [data];
-      navigate("/results", { state: { analysisData } });
+      navigate("/results", { 
+        state: { 
+          analysisData,
+          eventTime // Incluir dados de horário para análise horária
+        } 
+      });
       
     } catch (error: any) {
       console.error('Error:', error);
@@ -540,6 +553,18 @@ const Index = () => {
                       Data definida pelo evento selecionado
                     </p>
                   )}
+                </div>
+
+                {/* Seletor de Horário */}
+                <div className="space-y-2">
+                  <EventTimeSelector
+                    startTime={eventTime.startTime}
+                    endTime={eventTime.endTime}
+                    onStartTimeChange={(time) => setEventTime(prev => ({ ...prev, startTime: time }))}
+                    onEndTimeChange={(time) => setEventTime(prev => ({ ...prev, endTime: time }))}
+                    isAllDay={eventTime.isAllDay}
+                    onAllDayChange={(isAllDay) => setEventTime(prev => ({ ...prev, isAllDay }))}
+                  />
                 </div>
 
                 <div className="space-y-2">
