@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import InteractiveMap from "@/components/InteractiveMap";
 import QueryHistoryList from "@/components/QueryHistoryList";
 import { saveQueryToHistory } from "@/services/queryHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { EventsList } from "@/components/EventsList";
+import { UserLocation } from "@/types/events";
 
 interface SelectedLocation {
   name: string;
@@ -26,8 +28,11 @@ interface SelectedLocation {
 
 const Index = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [temperature, setTemperature] = useState([25]);
   const [userEmail, setUserEmail] = useState("");
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [showEvents, setShowEvents] = useState(false);
   const [selectedLocations, setSelectedLocations] = useState<SelectedLocation[]>([]);
   const [currentLocationInput, setCurrentLocationInput] = useState("");
   const [pendingLocation, setPendingLocation] = useState<SelectedLocation | null>(null);
@@ -37,6 +42,39 @@ const Index = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [locationCoordinates, setLocationCoordinates] = useState<{ lat: number; lon: number } | null>(null);
   const [isGeocodingLocation, setIsGeocodingLocation] = useState(false);
+  
+  // Modo de planejamento de evento
+  const eventPlanningMode = location.state?.eventPlanningMode;
+  const eventData = location.state?.eventData;
+  const [isEventMode, setIsEventMode] = useState(false);
+  const [eventName, setEventName] = useState("");
+  const [eventStartDate, setEventStartDate] = useState("");
+  const [eventEndDate, setEventEndDate] = useState("");
+
+  // Inicializar com dados do evento se vier do EventCard
+  useEffect(() => {
+    if (eventPlanningMode && eventData) {
+      setIsEventMode(true);
+      setEventName(eventData.name);
+      setEventStartDate(eventData.startDate);
+      setEventEndDate(eventData.endDate || eventData.startDate);
+      
+      // Definir localização padrão se houver
+      if (eventData.defaultLocation) {
+        setPendingLocation(eventData.defaultLocation);
+        setCurrentLocationInput(eventData.defaultLocation.name);
+      }
+      
+      // Scroll para o formulário
+      setTimeout(() => {
+        document.getElementById('event-planning-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      
+      toast.success(`Planejando: ${eventData.name}`, {
+        description: "Escolha a localização e analise o clima para as datas do evento"
+      });
+    }
+  }, [eventPlanningMode, eventData]);
 
   // Handle location selection from autocomplete
   const handleLocationSelect = (locationName: string, latitude: number, longitude: number) => {
@@ -115,6 +153,87 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Detectar localização do usuário para eventos
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          try {
+            // Fazer geocoding reverso para obter cidade/estado
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=pt-BR&zoom=12&addressdetails=1`,
+              {
+                headers: {
+                  'User-Agent': 'WeatherWise-Planner/1.0'
+                }
+              }
+            );
+
+            if (response.ok) {
+              const data = await response.json();
+              const address = data.address;
+              
+              setUserLocation({
+                city: address.city || address.town || address.village,
+                state: address.state,
+                country: address.country || 'Brasil',
+                latitude,
+                longitude,
+              });
+            }
+          } catch (error) {
+            console.error('Erro ao obter localização:', error);
+            // Fallback para localização padrão
+            setUserLocation({
+              country: 'Brasil',
+              latitude,
+              longitude,
+            });
+          }
+        },
+        (error) => {
+          console.log('Geolocalização negada ou indisponível:', error);
+          // Localização padrão se o usuário negar
+          setUserLocation({
+            city: 'São Paulo',
+            state: 'São Paulo',
+            country: 'Brasil',
+            latitude: -23.5505,
+            longitude: -46.6333,
+          });
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutos
+        }
+      );
+    } else {
+      // Navegador não suporta geolocalização
+      setUserLocation({
+        city: 'São Paulo',
+        state: 'São Paulo',
+        country: 'Brasil',
+        latitude: -23.5505,
+        longitude: -46.6333,
+      });
+    }
+  }, []);
+
+  // Verificar se há dados de evento pré-preenchidos da navegação
+  useEffect(() => {
+    if (location.state?.prefilledLocation) {
+      const { name, latitude, longitude } = location.state.prefilledLocation;
+      setSelectedLocations([{ name, latitude, longitude }]);
+      setLocationCoordinates({ lat: latitude, lon: longitude });
+    }
+    if (location.state?.prefilledDate) {
+      setDate(location.state.prefilledDate);
+    }
+  }, [location.state]);
+
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -126,6 +245,9 @@ const Index = () => {
   };
 
   const handleAnalyze = async () => {
+    // Determine qual data usar
+    const analysisDate = isEventMode ? eventStartDate : date;
+    
     // Validate inputs
     if (selectedLocations.length === 0) {
       toast.error("Por favor, adicione pelo menos uma localização clicando no botão '+' após selecionar o endereço.", {
@@ -135,7 +257,7 @@ const Index = () => {
       return;
     }
 
-    if (!date) {
+    if (!analysisDate) {
       toast.error("Por favor, selecione uma data.");
       return;
     }
@@ -156,7 +278,7 @@ const Index = () => {
         // Formato antigo (compatível com Edge Function atual)
         requestData = {
           location: selectedLocations[0].name,
-          date: date,
+          date: analysisDate,
           eventType: eventType,
           preferredTemperature: temperature[0]
         };
@@ -169,7 +291,7 @@ const Index = () => {
             latitude: loc.latitude,
             longitude: loc.longitude
           })),
-          date: date,
+          date: analysisDate,
           eventType: eventType,
           preferredTemperature: temperature[0]
         };
@@ -321,6 +443,44 @@ const Index = () => {
             </p>
           </div>
 
+          {/* Event Planning Mode Info */}
+          {isEventMode && (
+            <Card className="glass-effect p-6 mb-6 border-2 border-primary/50 shadow-glow-primary animate-slide-up" id="event-planning-section">
+              <div className="flex items-start gap-4">
+                <div className="p-3 gradient-primary rounded-xl">
+                  <Calendar className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold mb-2">Planejando Evento: {eventName}</h3>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>
+                      <strong>Período:</strong> {new Date(eventStartDate).toLocaleDateString('pt-BR')}
+                      {eventEndDate && eventEndDate !== eventStartDate && 
+                        ` até ${new Date(eventEndDate).toLocaleDateString('pt-BR')}`
+                      }
+                    </p>
+                    <p className="text-primary font-medium">
+                      ℹ️ Escolha a cidade/estado onde você pretende participar do evento para ver a previsão climática
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsEventMode(false);
+                    setEventName("");
+                    setEventStartDate("");
+                    setEventEndDate("");
+                  }}
+                  className="rounded-xl"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </Card>
+          )}
+
           {/* Search Form */}
           <Card className="glass-effect-strong p-4 md:p-10 shadow-2xl animate-slide-up hover-lift rounded-2xl border-2">
             <form 
@@ -404,7 +564,7 @@ const Index = () => {
                 <legend className="sr-only">Informações do Evento</legend>
                 <div className="space-y-2">
                   <Label htmlFor="date" className="text-base font-semibold">
-                    Data do Evento
+                    {isEventMode ? 'Data do Evento (Início)' : 'Data do Evento'}
                   </Label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" aria-hidden="true" />
@@ -412,13 +572,19 @@ const Index = () => {
                       id="date"
                       type="date"
                       className="pl-10 h-12 text-base"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
+                      value={isEventMode ? eventStartDate : date}
+                      onChange={(e) => isEventMode ? setEventStartDate(e.target.value) : setDate(e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
+                      disabled={isEventMode}
                       aria-label="Selecione a data do evento"
                       aria-required="true"
                     />
                   </div>
+                  {isEventMode && (
+                    <p className="text-xs text-muted-foreground">
+                      Data definida pelo evento selecionado
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -524,6 +690,30 @@ const Index = () => {
           </section>
         </div>
       </main>
+
+      {/* Events Section */}
+      {userLocation && (
+        <section className="max-w-6xl mx-auto px-4 pb-8 md:pb-12 mt-12 md:mt-20" aria-label="Eventos próximos">
+          <div className="text-center mb-8">
+            <Button
+              variant="hero"
+              size="lg"
+              onClick={() => setShowEvents(!showEvents)}
+              className="shadow-glow-primary rounded-xl"
+            >
+              <Calendar className="w-5 h-5 mr-2" />
+              {showEvents ? 'Ocultar Eventos Festivos' : 'Ver Eventos Festivos Próximos'}
+              <Sparkles className="w-5 h-5 ml-2" />
+            </Button>
+          </div>
+          
+          {showEvents && (
+            <div className="animate-slide-up">
+              <EventsList userLocation={userLocation} />
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Query History Section */}
       {isLoggedIn && (

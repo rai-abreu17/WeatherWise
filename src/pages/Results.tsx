@@ -87,6 +87,10 @@ const Results = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [bestLocationName, setBestLocationName] = useState<string | null>(null);
+  
+  // Modo evento: quando vem de um EventCard
+  const eventMode = location.state?.eventMode;
+  const eventData = location.state?.eventData;
 
   useEffect(() => {
     // Check if user is logged in
@@ -95,6 +99,17 @@ const Results = () => {
       setIsLoggedIn(!!user);
     };
     checkAuth();
+    
+    // Se estiver no modo evento, redirecionar para Index com dados pré-preenchidos
+    if (eventMode && eventData) {
+      navigate('/', {
+        state: {
+          eventPlanningMode: true,
+          eventData: eventData,
+        },
+      });
+      return;
+    }
     
     // Get analysis data from navigation state
     const data = location.state?.analysisData;

@@ -103,6 +103,209 @@ serve(async (req) => {
   }
 });
 
+// ============= NAGER.DATE API INTEGRATION =============
+
+/**
+ * Buscar feriados do ano com cache no banco de dados
+ */
+async function fetchHolidaysWithCache(
+  year: number,
+  countryCode: string = 'BR'
+): Promise<any[]> {
+  try {
+    // 1. Tentar buscar do cache usando fetch para Supabase REST API
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.warn('Supabase credentials not configured for holidays cache');
+      return await fetchHolidaysFromAPI(year, countryCode);
+    }
+
+    const cacheUrl = `${supabaseUrl}/rest/v1/holidays_cache?country_code=eq.${countryCode}&year=eq.${year}&select=*`;
+    const cacheResponse = await fetch(cacheUrl, {
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+      }
+    });
+
+    if (cacheResponse.ok) {
+      const cached = await cacheResponse.json();
+      if (cached && cached.length > 0) {
+        console.log(`✅ Using cached holidays for ${countryCode} ${year} (${cached.length} holidays)`);
+        return cached;
+      }
+    }
+
+    // 2. Se não tem cache, buscar da API Nager.Date
+    console.log(`🌐 Fetching holidays from Nager.Date API for ${countryCode} ${year}`);
+    const holidays = await fetchHolidaysFromAPI(year, countryCode);
+
+    // 3. Salvar no cache
+    if (holidays.length > 0) {
+      const holidaysToCache = holidays.map((h: any) => ({
+        country_code: countryCode,
+        year: year,
+        holiday_date: h.date,
+        local_name: h.localName,
+        name_en: h.name,
+        is_global: h.global,
+        holiday_types: h.types || ['Public']
+      }));
+
+      try {
+        await fetch(`${supabaseUrl}/rest/v1/holidays_cache`, {
+          method: 'POST',
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify(holidaysToCache)
+        });
+        console.log(`💾 Cached ${holidaysToCache.length} holidays for ${countryCode} ${year}`);
+      } catch (cacheError) {
+        console.warn('Failed to cache holidays:', cacheError);
+      }
+    }
+
+    return holidays;
+  } catch (error) {
+    console.error('Error in fetchHolidaysWithCache:', error);
+    return [];
+  }
+}
+
+/**
+ * Buscar feriados diretamente da API Nager.Date
+ */
+async function fetchHolidaysFromAPI(year: number, countryCode: string): Promise<any[]> {
+  const url = `https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode}`;
+  
+  try {
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`Nager.Date API error: ${response.status}`);
+      return [];
+    }
+
+    const holidays = await response.json();
+    return holidays;
+  } catch (error) {
+    console.error('Failed to fetch holidays from Nager.Date API:', error);
+    return [];
+  }
+}
+
+/**
+ * Buscar feriados próximos (próximos 6 meses a partir da data alvo)
+ */
+async function findNearbyHolidays(
+  targetDate: string,
+  countryCode: string = 'BR'
+): Promise<any[]> {
+  try {
+    const date = new Date(targetDate);
+    const year = date.getFullYear();
+    const nextYear = year + 1;
+    
+    // Buscar feriados do ano atual e próximo ano (para cobrir 6 meses)
+    const [currentYearHolidays, nextYearHolidays] = await Promise.all([
+      fetchHolidaysWithCache(year, countryCode),
+      fetchHolidaysWithCache(nextYear, countryCode)
+    ]);
+    
+    const allHolidays = [...currentYearHolidays, ...nextYearHolidays];
+    
+    if (allHolidays.length === 0) {
+      return [];
+    }
+    
+    // Filtrar feriados dos próximos 6 meses
+    const targetTime = date.getTime();
+    const sixMonthsMs = 6 * 30 * 24 * 60 * 60 * 1000; // Aproximadamente 6 meses
+    
+    return allHolidays
+      .map((holiday: any) => {
+        const holidayDate = holiday.holiday_date || holiday.date;
+        const holidayTime = new Date(holidayDate).getTime();
+        const diff = holidayTime - targetTime;
+        const daysFromTarget = Math.round(diff / (24 * 60 * 60 * 1000));
+        
+        return {
+          date: holidayDate,
+          name: holiday.local_name || holiday.localName,
+          nameEn: holiday.name_en || holiday.name,
+          isGlobal: holiday.is_global !== undefined ? holiday.is_global : holiday.global,
+          types: holiday.holiday_types || holiday.types || [],
+          daysFromTarget: daysFromTarget,
+          diff: diff
+        };
+      })
+      .filter((h: any) => h.diff >= 0 && h.diff <= sixMonthsMs) // Apenas feriados futuros nos próximos 6 meses
+      .sort((a: any, b: any) => a.diff - b.diff);
+  } catch (error) {
+    console.error('Error in findNearbyHolidays:', error);
+    return [];
+  }
+}
+
+/**
+ * Gerar mensagens contextuais sobre feriados
+ */
+function generateHolidayMessages(
+  nearbyHolidays: any[],
+  climateStats: any
+): string[] {
+  const messages: string[] = [];
+  
+  nearbyHolidays.forEach(holiday => {
+    const daysText = holiday.daysFromTarget === 0 
+      ? 'no mesmo dia' 
+      : `em ${holiday.daysFromTarget} dia${holiday.daysFromTarget > 1 ? 's' : ''}`;
+    
+    // Mensagem básica
+    messages.push(`📅 ${holiday.name} acontece ${daysText}`);
+    
+    // Alertas específicos para feriados muito próximos (até 14 dias)
+    if (holiday.daysFromTarget <= 14) {
+      // Feriados nacionais importantes
+      const majorHolidays = ['Natal', 'Ano Novo', 'Páscoa', 'Independência', 'Proclamação da República', 'Carnaval'];
+      const isMajorHoliday = majorHolidays.some(h => holiday.name.includes(h));
+      
+      if (isMajorHoliday && holiday.isGlobal) {
+        messages.push('⚠️ Feriado nacional - comércio fechado, trânsito reduzido, alta demanda por serviços');
+      }
+      
+      // Alertas climáticos para feriados próximos (até 7 dias)
+      if (holiday.daysFromTarget <= 7) {
+        if (climateStats.rainProbability > 60) {
+          messages.push(`🌧️ Feriado + ${climateStats.rainProbability}% de chance de chuva - planeje atividades cobertas`);
+        } else if (climateStats.rainProbability < 20 && climateStats.avgTemperature > 20 && climateStats.avgTemperature < 30) {
+          messages.push(`✅ Condições climáticas excelentes para aproveitar o feriado ao ar livre (${Math.round(climateStats.avgTemperature)}°C)`);
+        }
+        
+        // Alertas de temperatura extrema
+        if (climateStats.avgTemperature > 35) {
+          messages.push(`🌡️ Calor intenso previsto (${Math.round(climateStats.avgTemperature)}°C) - hidrate-se e evite sol forte`);
+        }
+      }
+      
+      // Carnaval
+      if (holiday.name.includes('Carnaval')) {
+        messages.push('🎭 Carnaval - espere grande movimento, blocos de rua e festas');
+      }
+    }
+  });
+  
+  return messages;
+}
+
+// ============= END NAGER.DATE INTEGRATION =============
+
 // Process a single location
 async function processLocation(
   location: Location,
@@ -140,6 +343,12 @@ async function processLocation(
     // Detect climate trends
     const trend = detectTrend(historicalData);
     
+    // Buscar feriados dos próximos 6 meses - Nager.Date API
+    const nearbyHolidays = await findNearbyHolidays(date, 'BR');
+    const holidayMessages = generateHolidayMessages(nearbyHolidays, statistics);
+    
+    console.log(`Found ${nearbyHolidays.length} holidays in the next 6 months from ${date}`);
+    
     // Suggest alternative dates
     const alternativeDates = await suggestAlternativeDates(
       coordinates.lat,
@@ -173,6 +382,11 @@ async function processLocation(
         extremeEvents: statistics.extremeEventsProbability,
         extremeDescription: getExtremeDescription(statistics.extremeEventsProbability),
         alertMessage: trend.isSignificant ? trend.message : null
+      },
+      holidays: {
+        count: nearbyHolidays.length,
+        nearby: nearbyHolidays,
+        messages: holidayMessages
       },
       alternativeDates: alternativeDates,
       dataSource: {
